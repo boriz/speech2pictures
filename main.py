@@ -3,24 +3,22 @@ import speech_recognition as sr
 import whisper
 import torch
 import io
+import os
+import subprocess
+import config
 
+from config import config
+from subprocess import Popen, PIPE
 from datetime import datetime, timedelta
 from queue import Queue
 from tempfile import NamedTemporaryFile
 from time import sleep
-
-class config:
-    energy_threshold = 1000
-    microphone = "pulse"
-    model_name = "medium"   # "tiny", "base", "small", "medium", "large"
-    english_language = True
-    record_timeout = 2  # Max seconds before calling a callback
-    phrase_timeout = 5  # How much empty space between recordings before we consider it a new line in the transcription.
+from image_gen import image_gen
 
 
 def main():
-    # The last time a recording was retreived from the queue.
-    phrase_time = None
+    # The last time we updated the image
+    last_image_time = datetime.utcnow()
 
     # Current raw audio bytes.
     last_sample = bytes()
@@ -71,29 +69,22 @@ def main():
 
     # Create a background thread that will pass us raw audio bytes.
     # We could do this manually but SpeechRecognizer provides a nice helper.
-    recorder.listen_in_background(audio_source, record_callback, phrase_time_limit = config.record_timeout)
+    recorder.listen_in_background(audio_source, record_callback, phrase_time_limit = config.phrase_timeout_sec)
+
+    # Loading image creation class
+    print("Loading image creation clas")
+    image_generator = image_gen(config)
 
     # Cue the user that we're ready to go.
     print("Starting main loop")
 
     while True:
         try:
-            now = datetime.utcnow()
-
             # Pull raw recorded audio from the queue.
             if not data_queue.empty():
-                phrase_complete = False
-
-                # If enough time has passed between recordings, consider the phrase complete.
-                # Clear the current working audio buffer to start over with the new data.
-                if phrase_time and now - phrase_time > timedelta(seconds = config.phrase_timeout):
-                    last_sample = bytes()
-                    phrase_complete = True
-
-                # This is the last time we received new audio data from the queue.
-                phrase_time = now
-
+                # Got new data            
                 # Concatenate our current audio data with the latest audio data.
+                last_sample = bytes()
                 while not data_queue.empty():
                     data = data_queue.get()
                     last_sample += data
@@ -109,23 +100,29 @@ def main():
                 # Read the transcription.
                 result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
                 text = result['text'].strip()
-                print("String: " + text)
+                print("Phrase: " + text)
+                transcription.append(text)
 
-                # If we detected a pause between recordings, add a new item to our transcripion.
-                # Otherwise edit the existing one.
-                if phrase_complete:
-                    transcription.append(text)
-                else:
-                    transcription[-1] = text
+                # Refresh image once in a while
+                now = datetime.utcnow()
+                if last_image_time and now - last_image_time > timedelta(seconds = config.image_refresh_sec):
+                    trans_str = "\n".join(transcription)
+                    print("Full starnscript: " + trans_str)
+                    image = image_generator.generate_image(trans_str)
+                    image.save("tmp_img.png")
+
+                    # Super cheese way of showing image from WSL
+                    os.system("taskkill.exe /IM mspaint.exe")
+                    Popen(["mspaint.exe", "tmp_img.png"], stdout=PIPE, stderr=PIPE)
+
+                    # Clear trasncipt and restart
+                    transcription.clear()
+                    last_image_time = now
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.25)
         except KeyboardInterrupt:
             break
-
-    print("\n\nTranscription:")
-    for line in transcription:
-        print(line)
 
 
 if __name__ == "__main__":
