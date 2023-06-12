@@ -5,8 +5,10 @@ import torch
 import io
 import os
 import subprocess
+import database
 import config
 
+from database import database
 from config import config
 from subprocess import Popen, PIPE
 from datetime import datetime, timedelta
@@ -14,6 +16,7 @@ from queue import Queue
 from tempfile import NamedTemporaryFile
 from time import sleep
 from image_gen import image_gen
+from PIL import Image
 
 
 def main():
@@ -75,8 +78,11 @@ def main():
     print("Loading image creation clas")
     image_generator = image_gen(config)
 
+    images_db = database(config)
+
     # Cue the user that we're ready to go.
     print("Starting main loop")
+    print("========================================")
 
     while True:
         try:
@@ -100,24 +106,64 @@ def main():
                 # Read the transcription.
                 result = audio_model.transcribe(temp_file, fp16=torch.cuda.is_available())
                 text = result['text'].strip()
+                
+                # It adds .. sometimes, delete them
+                text = text.replace("..", "")
+
                 print("Phrase: " + text)
                 transcription.append(text)
 
-                # Refresh image once in a while
-                now = datetime.utcnow()
-                if last_image_time and now - last_image_time > timedelta(seconds = config.image_refresh_sec):
-                    trans_str = "\n".join(transcription)
-                    print("Full starnscript: " + trans_str)
-                    image = image_generator.generate_image(trans_str)
-                    image.save("tmp_img.png")
+            # Refresh image once in a while
+            now = datetime.utcnow()
+            if last_image_time and now - last_image_time > timedelta(seconds = config.image_refresh_sec):
+                trans_str = ". ".join(transcription)
 
-                    # Super cheese way of showing image from WSL
-                    os.system("taskkill.exe /IM mspaint.exe")
-                    Popen(["mspaint.exe", "tmp_img.png"], stdout=PIPE, stderr=PIPE)
-
-                    # Clear trasncipt and restart
+                print("========================================")
+                print("Full starnscript: " + trans_str)
+                
+                if len(trans_str) < 200:
+                    # Transcript is to short, try again
+                    print("Transctipt is too short, contunue")
+                    print("========================================")
                     transcription.clear()
                     last_image_time = now
+                    continue
+
+                # Generate image and save it to the DB
+                title, style, description, img = image_generator.generate_image(trans_str)
+                if title is None or img is None:
+                    # Something is not right, continue
+                    print("ChatGPT exception, contunue")
+                    print("========================================")
+                    transcription.clear()
+                    last_image_time = now
+                    continue
+
+                # Got a legit image
+                print("========================================")
+                print("Rendered image: " + title + ". (" + style + "): " + description)
+
+                # Convert to jpg for the database
+                with io.BytesIO() as img_bytes:
+                    img.save(img_bytes, format='JPEG')
+                    img_bytes.seek(0)
+                    img_jpg = Image.open(img_bytes)
+                    img_jpg.load()
+                images_db.add_picture(trans_str, title, style, description, img_jpg)
+
+                # Super cheese way of showing image from WSL
+                img.save("tmp_img.png")
+                try:
+                    os.system("taskkill.exe /IM mspaint.exe")
+                except:
+                    pass
+                
+                Popen(["mspaint.exe", "tmp_img.png"], stdout=PIPE, stderr=PIPE)
+
+                # Clear trasncipt and restart
+                transcription.clear()
+                last_image_time = now
+                print("========================================")
 
                 # Infinite loops are bad for processors, must sleep.
                 sleep(0.25)
