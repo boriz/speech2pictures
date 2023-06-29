@@ -22,7 +22,7 @@ class image_gen:
         self.pipe = self.pipe.to("cuda")
 
 
-    def generate_image(self, transcript):
+    def generate_title(self, transcript):
         # create a chat completion 
         #print("GPT prompt: \n" + self.gpt_prompt + transcript)
 
@@ -36,15 +36,19 @@ class image_gen:
             print("Form GPT: \n" + res)
 
             # Be sure that we've got a legit reply
-            title = re.search("^(Title:|Photo:) (.+?)\n", res).group(1)
+            title = re.search("Title: (.+?)\n", res).group(1)
             # ChatGPT sometimes adds extra quotes, remove them
             title = title.replace('"', '')
             style = re.search("Style: (.*?)\n", res).group(1)
-            description = re.search("Description: (.*?)$", res).group(1)
+            description = re.search("Description: (.*?)(\n|$)", res).group(1)
         except Exception as e:
             print("Got exception from ChatGPT: " + str(e))
             return None, None, None, None
+            
+        return title, style, description
+    
 
+    def generate_image(self, title, style, description):
         # assemble the image prompt
         image_prompt = title + ". (" + style + "): " + description
         print("========================================")
@@ -53,12 +57,15 @@ class image_gen:
         # Try to generate an image
         img = self.pipe(image_prompt).images[0]
             
-        return title, style, description, img
+        return img
 
 
 if __name__ == "__main__":
     # Basci test code
     image_generator = image_gen(config)
-    title, style, description, img = image_generator.generate_image("Lets talk about white cow and how it can affect the car production")
-    print ("Image prompt: \n" + title + ". " + style + ". " + description)
+    #title, style, description = image_generator.generate_title("Lets talk about white cow and how it can affect the car production")
+    #print ("Image prompt: \n" + title + ". " + style + ". " + description)
+
+    img = image_generator.generate_image("Aloha Skies", "Pop Art", "This vibrant pop art piece captures the excitement of flying a hexacopter in Hawaii. It celebrates friendship, adventure, and the spirit of Hawaiian culture while reminding us to respect the environment.")
+    
     img.save("tmp.png")
