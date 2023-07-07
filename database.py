@@ -50,14 +50,13 @@ class database:
         return transcript, title, style, description, img
 
 
-    def get_last_picture(self):
+    def get_last_picture_id(self):
         conn = sqlite3.connect(config.db_file_name)
         cursor =conn.cursor()
-        sql = "SELECT Transcript, Title, Style, Description, Image FROM tblImages ORDER BY ID DESC LIMIT 1;"
+        sql = "SELECT ID FROM tblImages ORDER BY ID DESC LIMIT 1;"
         cursor.execute(sql)
-        transcript, title, style, description, img_bytes = cursor.fetchone()
-        img = Image.open(io.BytesIO(img_bytes))
-        return transcript, title, style, description, img
+        id = cursor.fetchone()
+        return id[0]
 
 
 if __name__ == "__main__":
@@ -67,9 +66,8 @@ if __name__ == "__main__":
     id = db_test.add_picture("test transcript", "test title", "test style", "test description", img)
     print("Saved to DB, id: " + str(id))
 
-    transcript_last, title_last, style_last, description_last, img_last = db_test.get_last_picture()
-    print("Last image title: " + title_last + ". (" + style_last + "): " + description_last)
-    img_last.save("db_test.jpg")
+    id_last = db_test.get_last_picture_id()
+    print("Last image: " + id_last)
 
     transcript, title, style, description, img = db_test.get_picture(1)
     print("Get picture with ID = 1: " + title)
