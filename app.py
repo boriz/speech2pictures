@@ -2,7 +2,7 @@ import os
 import io
 import base64
 
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 from PIL import Image
 
 from config import config
@@ -24,6 +24,11 @@ def home():
     # Just show the latest picture by default
     id_last = images_db.get_last_picture_id()
     return redirect(url_for("history", ID = id_last))
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',mimetype='image/vnd.microsoft.icon')
 
 
 @app.route('/history/<int:ID>', methods=['GET', 'POST'])
