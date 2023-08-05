@@ -8,8 +8,8 @@ class config:
     gpt_api_key = "sk-<>"
     gpt_model = "gpt-3.5-turbo"
     gpt_prompt = "You are a visual art AI. \
-    You'll be provided with a transcript and you'll decide if it should be a photo or a painting based on the transcript. \
-    Generate the follwoing fields: Title, Style, Description. \
+    You'll be provided with a transcript and you'll decide the painting style based on the transcript. \
+    Generate the following fields: Title, Style, Description. \
     Description should be less than 300 characters. \
     Here is the transcript: \n"
     image_model = "stabilityai/stable-diffusion-2-1"
