@@ -6,7 +6,6 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 from PIL import Image
 
 from config import config
-from image_gen import image_gen
 from database import database
 
 
@@ -14,16 +13,51 @@ app = Flask(__name__)
 
 # Misc variables
 #temp_file = os.path.join("static", "tmp.png")
-image_generator = image_gen(config)
+image_generator = None
 images_db = database(config)
+
+
+def get_image_generator():
+    global image_generator
+
+    if image_generator is None:
+        from image_gen import image_gen
+
+        image_generator = image_gen(config)
+
+    return image_generator
+
+
+def render_image_page(
+    image_id,
+    image=None,
+    full_description="",
+    message="",
+    transcript="",
+    title="",
+    style="",
+    description="",
+):
+    return render_template(
+        'index.html',
+        ID=image_id,
+        Image=image,
+        FullDescription=full_description,
+        Message=message,
+        TranscriptValue=transcript,
+        TitleValue=title,
+        StyleValue=style,
+        DescriptionValue=description,
+    )
 
 
 @app.route('/')
 @app.route('/index.html')
 def home():
-    # Just show the latest picture by default
     id_last = images_db.get_last_picture_id()
-    return redirect(url_for("history", ID = id_last))
+    if id_last is None:
+        return render_image_page(0, message="No images yet.")
+    return redirect(url_for("history", ID=id_last))
 
 
 @app.route('/favicon.ico')
@@ -35,64 +69,137 @@ def favicon():
 def history (ID):
     # Use low case variable locally
     id = ID
-    
+
     if request.method == "POST":
         # Navigation buttons
-        nav_previous = request.form["nav"] != None and request.form["nav"] == "Previous"
-        nav_next = request.form["nav"] != None and request.form["nav"]== "Next"
-        nav_last = request.form["nav"] != None and request.form["nav"]== "Last"
+        nav = request.form.get("nav")
+        nav_previous = nav == "Previous"
+        nav_next = nav == "Next"
+        nav_last = nav == "Last"
         if nav_last:
-            # Last button
             id_last = images_db.get_last_picture_id()
+            if id_last is None:
+                return render_image_page(0, message="No images yet.")
             return redirect(url_for("history", ID = id_last))
         if nav_previous:
-            # Prev button
             if id > 1:
                 id = id - 1
             return redirect(url_for("history", ID = id))
         elif nav_next:
-            # Next button
             id_last = images_db.get_last_picture_id()
+            if id_last is None:
+                return render_image_page(0, message="No images yet.")
             if id < id_last:
                 id = id + 1
             return redirect(url_for("history", ID = id))
-        
-    # We shold have a valid id at this point
-    transcript_last, title_last, style_last, description_last, img_last = images_db.get_picture(id)
-    
-    # Encode image into html
+
+    record = images_db.get_picture(id)
+    if record is None:
+        return render_image_page(id, message="No image found for ID " + str(id) + ".")
+
+    transcript_last, title_last, style_last, description_last, img_last = record
+
     img_bytes = io.BytesIO()
     img_last.save(img_bytes, format='JPEG')
     img_encoded = base64.b64encode(img_bytes.getvalue())
-    
-    # Current image description
-    full_description = title_last + " (" + style_last + "): " + description_last
+
+    full_description = title_last
+    if style_last:
+        full_description = full_description + " (" + style_last + ")"
+    if description_last:
+        full_description = full_description + ": " + description_last
     print ("Image prompt: " + full_description)
 
-    return render_template('index.html', ID = id, Image = img_encoded.decode('utf-8'), FullDescription = full_description)
+    return render_image_page(id, image=img_encoded.decode('utf-8'), full_description=full_description)
 
 
 @app.route('/txt2img', methods=['POST'])
 def txt2img():
-    transcript = request.form['Transcript']
-    title = request.form['Title']
-    style = request.form['Style']
-    description = request.form['Description']
+    transcript = request.form.get('Transcript', '')
+    title = request.form.get('Title', '')
+    style = request.form.get('Style', '')
+    description = request.form.get('Description', '')
 
-    if transcript != "":
-        print ("Transcriopt provided: " + transcript)
-        title, style, description = image_generator.generate_title(transcript)
-    
-    # We can now generate an image
-    full_description = title + " (" + style + "): " + description
-    print ("Image prompt: " + full_description)
-    img = image_generator.generate_image(title, style, description)
+    transcript_value = transcript.strip()
+    title_value = title.strip()
+    style_value = style.strip()
+    description_value = description.strip()
 
-    # Save to database
-    new_id = images_db.add_picture(transcript, title, style, description, img)
-    
+    if transcript_value != "":
+        print("Transcript provided: " + transcript_value)
+        try:
+            generated_title, generated_style, generated_description = (
+                get_image_generator().generate_title(transcript_value)
+            )
+        except Exception as exc:
+            print("Title generation failed: " + str(exc))
+            return render_image_page(
+                0,
+                message="Could not generate a title from the transcript. "
+                        "Please edit the fields and try again.",
+                transcript=transcript,
+                title=title,
+                style=style,
+                description=description,
+            )
+
+        if generated_title.strip() == "":
+            return render_image_page(
+                0,
+                message="Could not generate a title from the transcript. "
+                        "Please edit the fields and try again.",
+                transcript=transcript,
+                title=title,
+                style=style,
+                description=description,
+            )
+
+        title = generated_title
+        style = generated_style
+        description = generated_description
+        title_value = title.strip()
+        style_value = style.strip()
+        description_value = description.strip()
+
+    if title_value == "":
+        return render_image_page(
+            0,
+            message="Enter a title or transcript before generating an image.",
+            transcript=transcript,
+            title=title,
+            style=style,
+            description=description,
+        )
+
+    full_description = title_value + " (" + style_value + "): " + description_value
+    print("Image prompt: " + full_description)
+
+    try:
+        img = get_image_generator().generate_image(
+            title_value,
+            style_value,
+            description_value,
+        )
+        new_id = images_db.add_picture(
+            transcript_value,
+            title_value,
+            style_value,
+            description_value,
+            img,
+        )
+    except Exception as exc:
+        print("Image generation failed: " + str(exc))
+        return render_image_page(
+            0,
+            message="Image generation failed. Your form values were kept.",
+            transcript=transcript,
+            title=title,
+            style=style,
+            description=description,
+        )
+
     return redirect(url_for("history", ID = new_id))
-    
+
 
 if __name__ == '__main__':
     app.run(debug = True)

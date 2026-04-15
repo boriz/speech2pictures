@@ -15,7 +15,7 @@ fi
 
 ngrok http --domain=<domain> 5000 > /dev/null &
 
-cd ~/speach2pictures/
+cd ~/speech2pictures/
 source ./venv/bin/activate
 flask run --host=0.0.0.0 &
 

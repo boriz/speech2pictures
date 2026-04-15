@@ -18,6 +18,11 @@
                     * If trasncipt is provided, then it'll try to generate image title/description and after that it'll generate an image based on the title/description <br>
                     * If title, style and description are provided, then it'll generate an image based on that.
                 </p>
+                {% if Message %}
+                <div style="margin: 10px 0; padding: 8px; border: 1px solid #999; white-space: pre-wrap;">
+                    {{ Message }}
+                </div>
+                {% endif %}
                 <hr>
                 <form action="{{ url_for('txt2img') }}" method="post">
                     <table style="width: 100%;">
@@ -27,7 +32,7 @@
                                 Transcipt:
                             </td> 
                             <td>
-                                <textarea name="Transcript" type="text" rows="8" style="width: 100%;"></textarea>
+                                <textarea name="Transcript" type="text" rows="8" style="width: 100%;">{{ TranscriptValue|default('') }}</textarea>
                             </td>                            
                         </tr>
                         <tr>
@@ -36,7 +41,7 @@
                                 Title: 
                             </td>
                             <td>
-                                <input name="Title" type="text" style="width: 100%;"/> 
+                                <input name="Title" type="text" style="width: 100%;" value="{{ TitleValue|default('') }}"/> 
                             </td>
                         </tr>
                         <tr>
@@ -44,7 +49,7 @@
                                 Style: 
                             </td>
                             <td>
-                                <input name="Style" type="text" style="width: 100%;"/> 
+                                <input name="Style" type="text" style="width: 100%;" value="{{ StyleValue|default('') }}"/> 
                             </td>
                         </tr>
                         <tr>
@@ -52,7 +57,7 @@
                                 Description: 
                             </td>
                             <td>
-                                <textarea name="Description" type="text" rows="5" style="width: 100%;"></textarea>
+                                <textarea name="Description" type="text" rows="5" style="width: 100%;">{{ DescriptionValue|default('') }}</textarea>
                             </td>
                         </tr>
                         <tr>
@@ -86,7 +91,13 @@
                 </form>
             </td>
             <td style="width: 70%; padding: 10px; vertical-align: top;">
+                {% if Image %}
                 <img id="latest_image" src="data:image/jpeg;base64,{{ Image }}" width="100%"/>
+                {% else %}
+                <div style="min-height: 300px; border: 1px dashed #999; display: flex; align-items: center; justify-content: center;">
+                    No image to display.
+                </div>
+                {% endif %}
             </td>
         </tr>
         <tr>
