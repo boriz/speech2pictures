@@ -54,8 +54,12 @@ Call out blockers: missing deps, GPU, mic, secrets.
 
 ## Routing
 
+- PM stays in the main thread.
+- Developer runs in a separate `worker` agent.
+- Tester runs in a separate `worker` agent.
+- Skills guide those workers, but workers provide the actual context
+  isolation.
 - PM dispatches work.
-- PM may start developer and tester agents as needed.
 - Developer reports back to PM.
 - PM sends tester work.
 - Developer and tester follow PM hand-offs unless the user overrides.

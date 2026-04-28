@@ -1,21 +1,20 @@
-#/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-PID=`ps -eaf | grep ngrok | grep -v grep | awk '{print $2}'`
-if [[ "" !=  "$PID" ]]; then
-  echo "Killing ngrok, pid = $PID"
-  kill -9 $PID
-fi
+repo_root="$(
+    cd "$(dirname "$0")" && pwd
+)"
 
-PID=`ps -eaf | grep flask | grep -v grep | awk '{print $2}'`
-if [[ "" !=  "$PID" ]]; then
-  echo "Killing flask, pid = $PID"
-  kill -9 $PID
-fi
+cat <<'EOF'
+ngrok_start.sh is deprecated.
+Use ./run_app.sh to start the app.
+If you need ngrok, start it manually in another shell after the app is up.
+EOF
 
+echo "Repo root: ${repo_root}"
+echo "Example:"
+echo "  source ./activate_venv.sh"
+echo "  ./run_app.sh"
+echo "  ngrok http 5000"
 
-ngrok http --domain=<domain> 5000 > /dev/null &
-
-cd ~/speech2pictures/
-source ./venv/bin/activate
-flask run --host=0.0.0.0 &
-
+exit 1

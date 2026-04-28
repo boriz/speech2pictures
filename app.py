@@ -3,7 +3,6 @@ import io
 import base64
 
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
-from PIL import Image
 
 from config import config
 from database import database
@@ -51,13 +50,42 @@ def render_image_page(
     )
 
 
+def render_no_images_page():
+    return render_image_page(0, message="No images yet.")
+
+
+def render_transcript_failure_page(transcript, title, style, description):
+    return render_image_page(
+        0,
+        message="Could not generate a title from the transcript. "
+                "Please edit the fields and try again.",
+        transcript=transcript,
+        title=title,
+        style=style,
+        description=description,
+    )
+
+
+def redirect_to_last_history_or_empty_state():
+    id_last = images_db.get_last_picture_id()
+    if id_last is None:
+        return render_no_images_page()
+    return redirect(url_for("history", ID=id_last))
+
+
+def build_full_description(title, style, description):
+    full_description = title
+    if style:
+        full_description = full_description + " (" + style + ")"
+    if description:
+        full_description = full_description + ": " + description
+    return full_description
+
+
 @app.route('/')
 @app.route('/index.html')
 def home():
-    id_last = images_db.get_last_picture_id()
-    if id_last is None:
-        return render_image_page(0, message="No images yet.")
-    return redirect(url_for("history", ID=id_last))
+    return redirect_to_last_history_or_empty_state()
 
 
 @app.route('/favicon.ico')
@@ -77,10 +105,7 @@ def history (ID):
         nav_next = nav == "Next"
         nav_last = nav == "Last"
         if nav_last:
-            id_last = images_db.get_last_picture_id()
-            if id_last is None:
-                return render_image_page(0, message="No images yet.")
-            return redirect(url_for("history", ID = id_last))
+            return redirect_to_last_history_or_empty_state()
         if nav_previous:
             if id > 1:
                 id = id - 1
@@ -88,7 +113,7 @@ def history (ID):
         elif nav_next:
             id_last = images_db.get_last_picture_id()
             if id_last is None:
-                return render_image_page(0, message="No images yet.")
+                return render_no_images_page()
             if id < id_last:
                 id = id + 1
             return redirect(url_for("history", ID = id))
@@ -103,14 +128,18 @@ def history (ID):
     img_last.save(img_bytes, format='JPEG')
     img_encoded = base64.b64encode(img_bytes.getvalue())
 
-    full_description = title_last
-    if style_last:
-        full_description = full_description + " (" + style_last + ")"
-    if description_last:
-        full_description = full_description + ": " + description_last
+    full_description = build_full_description(title_last, style_last, description_last)
     print ("Image prompt: " + full_description)
 
-    return render_image_page(id, image=img_encoded.decode('utf-8'), full_description=full_description)
+    return render_image_page(
+        id,
+        image=img_encoded.decode('utf-8'),
+        full_description=full_description,
+        transcript=transcript_last,
+        title=title_last,
+        style=style_last,
+        description=description_last,
+    )
 
 
 @app.route('/txt2img', methods=['POST'])
@@ -133,25 +162,19 @@ def txt2img():
             )
         except Exception as exc:
             print("Title generation failed: " + str(exc))
-            return render_image_page(
-                0,
-                message="Could not generate a title from the transcript. "
-                        "Please edit the fields and try again.",
-                transcript=transcript,
-                title=title,
-                style=style,
-                description=description,
+            return render_transcript_failure_page(
+                transcript,
+                title,
+                style,
+                description,
             )
 
         if generated_title.strip() == "":
-            return render_image_page(
-                0,
-                message="Could not generate a title from the transcript. "
-                        "Please edit the fields and try again.",
-                transcript=transcript,
-                title=title,
-                style=style,
-                description=description,
+            return render_transcript_failure_page(
+                transcript,
+                title,
+                style,
+                description,
             )
 
         title = generated_title
@@ -171,7 +194,11 @@ def txt2img():
             description=description,
         )
 
-    full_description = title_value + " (" + style_value + "): " + description_value
+    full_description = build_full_description(
+        title_value,
+        style_value,
+        description_value,
+    )
     print("Image prompt: " + full_description)
 
     try:

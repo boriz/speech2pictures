@@ -7,7 +7,8 @@
 - break work into chunks
 - track risks and blockers
 - dispatch developer/tester
-- start developer/tester agents as needed
+- stay in the main thread
+- start developer/tester as separate `worker` agents
 - own plan and status
 - review plans, process docs, merge strategy, agent docs
 

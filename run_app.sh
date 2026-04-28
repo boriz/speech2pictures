@@ -4,19 +4,22 @@ set -euo pipefail
 repo_root="$(
     cd "$(dirname "$0")" && pwd
 )"
-venv_python="${repo_root}/venv/bin/python3"
+activate_script="${repo_root}/activate_venv.sh"
 
-if [[ ! -x "${venv_python}" ]]; then
-    echo "Python executable not found in ${repo_root}/venv" >&2
+if [[ ! -f "${activate_script}" ]]; then
+    echo "Activation script not found at ${activate_script}" >&2
     exit 1
 fi
 
 cd "${repo_root}"
 
+# shellcheck disable=SC1090
+source "${activate_script}"
+
 host="${FLASK_RUN_HOST:-0.0.0.0}"
 port="${FLASK_RUN_PORT:-5000}"
 
-exec "${venv_python}" -m flask --app app run \
+exec python3 -m flask --app app run \
     --host "${host}" \
     --port "${port}" \
     "$@"

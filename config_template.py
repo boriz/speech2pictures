@@ -12,6 +12,17 @@ class config:
     Generate the following fields: Title, Style, Description. \
     Description should be less than 300 characters. \
     Here is the transcript: \n"
-    image_model = "stabilityai/stable-diffusion-2-1"
+    image_model = "stabilityai/stable-diffusion-xl-base-1.0"
+    image_width = 512
+    image_height = 512
+    image_num_inference_steps = 16
+    image_enable_xformers = False
+    image_enable_vae_slicing = True
+    image_enable_vae_tiling = True
+    image_enable_torch_compile = False
+    image_enable_channels_last = True
+    image_enable_cpu_offload = False
+    image_enable_sequential_cpu_offload = False
+    image_enable_low_vram = False
     db_file_name = "image_database.sqlite"
 	

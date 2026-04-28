@@ -8,6 +8,7 @@
 - implementation-side checks when practical
 - code review and implementation risk review
 - reporting results back to PM
+- running as a separate `worker` agent when PM delegates implementation
 
 ## Rules
 

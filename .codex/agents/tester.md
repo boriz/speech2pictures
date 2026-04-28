@@ -9,6 +9,7 @@
 - focus on behavior, regressions, edge cases
 - report clear repros and expected vs actual
 - separate verified, assumed, and blocked
+- running as a separate `worker` agent when PM delegates validation
 
 ## Does Not Own
 
