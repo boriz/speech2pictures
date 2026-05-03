@@ -7,7 +7,6 @@ blinker==1.9.0
 certifi==2023.5.7
 charset-normalizer==3.1.0
 click==8.1.3
-cmake==3.26.3
 diffusers==0.19.3
 filelock==3.12.0
 Flask==3.1.3
@@ -20,13 +19,10 @@ invisible-watermark==0.2.0
 itsdangerous==2.2.0
 Jinja2==3.1.2
 lit==16.0.5
-llvmlite==0.40.0
 MarkupSafe==2.1.2
-more-itertools==9.1.0
 mpmath==1.3.0
 multidict==6.0.4
 networkx==3.1
-numba==0.57.0
 numpy==1.24.3
 opencv-python==4.8.1.78
 nvidia-cublas-cu11==11.10.3.66
@@ -41,17 +37,14 @@ nvidia-cusparse-cu11==11.7.4.91
 nvidia-nccl-cu11==2.14.3
 nvidia-nvtx-cu11==11.7.91
 openai==0.27.7
-openai-whisper @ git+https://github.com/openai/whisper.git@248b6cb124225dd263bb9bd32d060b6517e067f8
 packaging==23.1
 Pillow==9.5.0
 psutil==5.9.5
-PyAudio==0.2.13
 PyYAML==6.0
 regex==2023.5.5
 requests==2.31.0
 safetensors==0.3.1
 scipy==1.10.1
-SpeechRecognition==3.10.0
 sympy==1.12
 tiktoken==0.3.3
 tokenizers==0.13.3

@@ -1,5 +1,4 @@
 import importlib
-import io
 import os
 import sys
 import tempfile
@@ -155,6 +154,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
             self.assertIn(b'href="/auto"', response.data)
             self.assertIn(b'href="/manual"', response.data)
             self.assertIn(b'href="/history"', response.data)
+            self.assertNotIn(b"md:hidden", response.data)
 
     def test_auto_page_has_recording_controls(self):
         response = self.client.get("/auto")
@@ -170,8 +170,6 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b'id="transcriptHeading"', response.data)
         self.assertIn(b"Transcript (0%)", response.data)
         self.assertIn(b'id="transcriptText"', response.data)
-        self.assertIn(b'id="sttDiagnostics"', response.data)
-        self.assertIn(b"STT diagnostics", response.data)
         self.assertIn(b"No picture yet. Ready to record audio.", response.data)
         self.assertIn(b'id="statusText"', response.data)
         self.assertNotIn(b'id="serverMessage"', response.data)
@@ -196,11 +194,9 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"recognition.addEventListener(\"nomatch\"", response.data)
         self.assertIn(b"recognition.addEventListener(\"error\"", response.data)
         self.assertIn(b"recognition.addEventListener(\"result\"", response.data)
-        self.assertIn(b"addSttDiagnostic(\"watchdog\"", response.data)
         self.assertIn(b"describeSpeechError(event)", response.data)
         self.assertIn(b"not-allowed", response.data)
         self.assertIn(b"service-not-allowed", response.data)
-        self.assertIn(b"window.speech2PicturesSttLog", response.data)
         self.assertIn(b"setInterimTranscript(interimText)", response.data)
         self.assertIn(b"appendTranscript(finalText)", response.data)
         self.assertIn(b"recognition.start()", response.data)
@@ -208,12 +204,13 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"setMicButtonRecording(true)", response.data)
         self.assertIn(b"setMicButtonRecording(false)", response.data)
         self.assertIn(b"Starting speech recognition", response.data)
-        self.assertIn(
-            b"short Web Speech sessions; no separate microphone stream",
-            response.data,
-        )
         self.assertIn(b"Open this page in Chrome to use Auto.", response.data)
         self.assertNotIn(b"/auto/transcribe", response.data)
+        self.assertNotIn(b"STT diagnostics", response.data)
+        self.assertNotIn(b'id="sttDiagnostics"', response.data)
+        self.assertNotIn(b"window.speech2PicturesSttLog", response.data)
+        self.assertNotIn(b"addSttDiagnostic(", response.data)
+        self.assertNotIn(b"Open Manual", response.data)
         self.assertNotIn(b"MediaRecorder", response.data)
         self.assertNotIn(b"recordingSegment", response.data)
         self.assertNotIn(b"preferredRecorderMimeTypes", response.data)
@@ -281,97 +278,6 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertNotIn(("ID=" + str(latest_id)).encode("utf-8"), response.data)
         self.assertNotIn(("ID " + str(latest_id)).encode("utf-8"), response.data)
         self.assertNotIn(b"older title", response.data)
-
-    def test_auto_transcribe_accepts_browser_upload(self):
-        model = mock.Mock()
-        model.transcribe.return_value = {"text": " transcribed words "}
-        self.app_module.get_audio_model = mock.Mock(return_value=model)
-        self.app_module.whisper_fp16_enabled = mock.Mock(return_value=False)
-
-        response = self.client.post(
-            "/auto/transcribe",
-            data={"audio": (io.BytesIO(b"audio bytes"), "recording.webm")},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content_type, "application/json")
-        payload = response.get_json()
-        self.assertTrue(payload["implemented"])
-        self.assertEqual(payload["transcript"], "transcribed words")
-        self.assertIn("transcribed", payload["message"])
-        self.assertEqual(model.transcribe.call_count, 1)
-        transcribe_path = model.transcribe.call_args.args[0]
-        self.assertTrue(transcribe_path.endswith(".webm"))
-        self.assertFalse(os.path.exists(transcribe_path))
-        self.assertEqual(model.transcribe.call_args.kwargs["fp16"], False)
-
-    def test_auto_transcribe_accepts_file_upload_name(self):
-        model = mock.Mock()
-        model.transcribe.return_value = {"text": "from file"}
-        self.app_module.get_audio_model = mock.Mock(return_value=model)
-        self.app_module.whisper_fp16_enabled = mock.Mock(return_value=True)
-
-        response = self.client.post(
-            "/auto/transcribe",
-            data={"file": (io.BytesIO(b"audio bytes"), "clip.wav")},
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.get_json()
-        self.assertTrue(payload["implemented"])
-        self.assertEqual(payload["transcript"], "from file")
-        transcribe_path = model.transcribe.call_args.args[0]
-        self.assertTrue(transcribe_path.endswith(".wav"))
-        self.assertEqual(model.transcribe.call_args.kwargs["fp16"], True)
-
-    def test_auto_transcribe_accepts_recording_upload_name(self):
-        model = mock.Mock()
-        model.transcribe.return_value = {"text": "from recording"}
-        self.app_module.get_audio_model = mock.Mock(return_value=model)
-        self.app_module.whisper_fp16_enabled = mock.Mock(return_value=False)
-
-        response = self.client.post(
-            "/auto/transcribe",
-            data={
-                "recording": (
-                    io.BytesIO(b"audio bytes"),
-                    "recording",
-                    "audio/webm",
-                )
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        payload = response.get_json()
-        self.assertTrue(payload["implemented"])
-        self.assertEqual(payload["transcript"], "from recording")
-        transcribe_path = model.transcribe.call_args.args[0]
-        self.assertTrue(transcribe_path.endswith(".webm"))
-
-    def test_auto_transcribe_requires_audio_file(self):
-        response = self.client.post("/auto/transcribe", data={})
-
-        self.assertEqual(response.status_code, 400)
-        payload = response.get_json()
-        self.assertTrue(payload["implemented"])
-        self.assertIn("No audio", payload["message"])
-
-    def test_auto_transcribe_reports_runtime_failure(self):
-        self.app_module.get_audio_model = mock.Mock(
-            side_effect=RuntimeError("model load failed")
-        )
-
-        response = self.client.post(
-            "/auto/transcribe",
-            data={"audio": (io.BytesIO(b"audio bytes"), "recording.webm")},
-        )
-
-        self.assertEqual(response.status_code, 500)
-        payload = response.get_json()
-        self.assertTrue(payload["implemented"])
-        self.assertEqual(payload["transcript"], "")
-        self.assertIn("Speech-to-text failed", payload["message"])
-        self.assertIn("model load failed", payload["message"])
 
     def test_auto_generate_creates_saved_picture_from_transcript(self):
         generator = mock.Mock()
@@ -457,52 +363,6 @@ class HistoryBrowseUiTests(unittest.TestCase):
         payload = response.get_json()
         self.assertIn("Image generation failed", payload["message"])
         self.assertIn("cuda unavailable", payload["message"])
-
-    def test_get_audio_model_loads_configured_whisper_model_lazily(self):
-        fake_model = mock.Mock()
-        fake_whisper = mock.Mock()
-        fake_whisper.load_model.return_value = fake_model
-        original_model_name = self.app_module.config.model_name
-        original_english_language = self.app_module.config.english_language
-        self.app_module.audio_model = None
-        self.app_module.audio_model_name = None
-        self.app_module.config.model_name = "small"
-        self.app_module.config.english_language = True
-
-        try:
-            with mock.patch.dict(sys.modules, {"whisper": fake_whisper}):
-                first_model = self.app_module.get_audio_model()
-                second_model = self.app_module.get_audio_model()
-        finally:
-            self.app_module.config.model_name = original_model_name
-            self.app_module.config.english_language = original_english_language
-            self.app_module.audio_model = None
-            self.app_module.audio_model_name = None
-
-        self.assertIs(first_model, fake_model)
-        self.assertIs(second_model, fake_model)
-        fake_whisper.load_model.assert_called_once_with("small.en")
-
-    def test_get_audio_model_uses_large_model_without_english_suffix(self):
-        fake_whisper = mock.Mock()
-        fake_whisper.load_model.return_value = mock.Mock()
-        original_model_name = self.app_module.config.model_name
-        original_english_language = self.app_module.config.english_language
-        self.app_module.audio_model = None
-        self.app_module.audio_model_name = None
-        self.app_module.config.model_name = "large"
-        self.app_module.config.english_language = True
-
-        try:
-            with mock.patch.dict(sys.modules, {"whisper": fake_whisper}):
-                self.app_module.get_audio_model()
-        finally:
-            self.app_module.config.model_name = original_model_name
-            self.app_module.config.english_language = original_english_language
-            self.app_module.audio_model = None
-            self.app_module.audio_model_name = None
-
-        fake_whisper.load_model.assert_called_once_with("large")
 
     def test_mobile_history_uses_timestamp_only_metadata(self):
         image_id = self.add_record(

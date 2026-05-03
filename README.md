@@ -68,7 +68,7 @@ http://127.0.0.1:5055/manual
 Compile the main Python files:
 
 ```bash
-python3 -m py_compile app.py image_gen.py database.py speech2pic_cli.py
+python3 -m py_compile app.py image_gen.py database.py
 ```
 
 Run focused unit tests:

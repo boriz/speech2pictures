@@ -109,20 +109,9 @@ Transcript
 <section class="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-2">
 <div class="font-['Space_Grotesk'] text-lg font-semibold text-slate-50" id="transcriptHeading">Transcript (0%)</div>
 <div class="min-h-24 rounded-lg border border-slate-700 bg-slate-950/60 p-3 font-['Manrope'] text-sm text-slate-300 whitespace-pre-wrap" id="transcriptText">No transcript yet.</div>
-<details class="font-['Manrope'] text-xs text-slate-400">
-<summary class="inline-flex cursor-pointer items-center gap-1 text-violet-300">
-<span class="material-symbols-outlined text-[16px]">bug_report</span>
-STT diagnostics
-</summary>
-<div class="mt-2 max-h-32 overflow-auto rounded-lg border border-slate-700 bg-slate-950/60 p-2 whitespace-pre-wrap" id="sttDiagnostics">Idle</div>
-</details>
 </section>
-<a class="w-full bg-slate-800 text-slate-100 border border-slate-700 font-['Manrope'] font-semibold py-4 rounded-lg flex items-center justify-center gap-2 active:scale-[0.98]" href="{{ url_for('manual') }}">
-<span class="material-symbols-outlined">edit</span>
-Open Manual
-</a>
 </main>
-<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-2 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl md:hidden">
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-2 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
 <a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-4 py-1 active:scale-90 duration-150" href="{{ url_for('auto') }}">
 <span class="material-symbols-outlined mb-1">bolt</span>
 <span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">Auto</span>
@@ -142,7 +131,6 @@ const micToggleIcon = document.getElementById("micToggleIcon");
 const statusText = document.getElementById("statusText");
 const transcriptHeading = document.getElementById("transcriptHeading");
 const transcriptText = document.getElementById("transcriptText");
-const sttDiagnostics = document.getElementById("sttDiagnostics");
 const pictureFrame = document.getElementById("pictureFrame");
 const frameText = document.getElementById("frameText");
 const frameIcon = document.getElementById("frameIcon");
@@ -153,10 +141,6 @@ const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecogni
 
 let recognition = null;
 let recognitionActive = false;
-let sttEventLog = [];
-let sttWatchdogTimer = null;
-let sttResultCount = 0;
-let sttSpeechStartCount = 0;
 let transcriptBuffer = "";
 let interimTranscript = "";
 let stoppedByUser = false;
@@ -179,14 +163,6 @@ function updateTranscriptProgress() {
   transcriptHeading.textContent = `Transcript (${getTranscriptPercent()}%)`;
 }
 
-function addSttDiagnostic(eventName, detail = "") {
-  const timestamp = new Date().toLocaleTimeString();
-  const line = `[${timestamp}] ${eventName}${detail ? `: ${detail}` : ""}`;
-  sttEventLog = [...sttEventLog.slice(-11), line];
-  sttDiagnostics.textContent = sttEventLog.join("\n");
-  window.speech2PicturesSttLog = sttEventLog;
-}
-
 function describeSpeechError(event) {
   const error = event.error || "unknown";
   const message = event.message ? ` ${event.message}` : "";
@@ -201,26 +177,6 @@ function describeSpeechError(event) {
     "service-not-allowed": "Chrome blocked or does not provide the speech recognition service.",
   };
   return `${error}. ${descriptions[error] || "Chrome did not provide a detailed reason."}${message}`;
-}
-
-function clearSttWatchdog() {
-  if (sttWatchdogTimer) {
-    window.clearTimeout(sttWatchdogTimer);
-    sttWatchdogTimer = null;
-  }
-}
-
-function startSttWatchdog() {
-  clearSttWatchdog();
-  sttWatchdogTimer = window.setTimeout(() => {
-    if (recognitionActive && sttResultCount === 0) {
-      const detail = sttSpeechStartCount > 0
-        ? "speech was detected, but Chrome has not returned transcript text"
-        : "recognition is running, but Chrome has not emitted speech or transcript events";
-      addSttDiagnostic("watchdog", detail);
-      setStatus(`Speech recognition active; ${detail}.`, "settings_voice");
-    }
-  }, 10000);
 }
 
 function renderTranscriptText() {
@@ -453,7 +409,6 @@ function maybeGeneratePicture() {
 function stopRecordingState() {
   recognition = null;
   recognitionActive = false;
-  clearSttWatchdog();
   setMicButtonRecording(false);
   resetVolumeMeter();
 }
@@ -462,7 +417,6 @@ function startSpeechRecognition() {
   if (!SpeechRecognition) {
     transcriptText.textContent = "Chrome speech recognition is unavailable.";
     setStatus("Speech recognition is unavailable.", "error");
-    addSttDiagnostic("unsupported", "SpeechRecognition API is missing");
     return false;
   }
 
@@ -473,53 +427,41 @@ function startSpeechRecognition() {
   recognition.lang = "en-US";
 
   recognition.addEventListener("start", () => {
-    addSttDiagnostic("start");
-    startSttWatchdog();
     setVolumeLevel(0.2);
     setStatus("Listening for speech...", "settings_voice");
   });
 
   recognition.addEventListener("audiostart", () => {
-    addSttDiagnostic("audiostart");
     setVolumeLevel(0.3);
     setStatus("Listening for speech...", "settings_voice");
   });
 
   recognition.addEventListener("soundstart", () => {
-    addSttDiagnostic("soundstart");
     setVolumeLevel(0.55);
   });
 
   recognition.addEventListener("soundend", () => {
-    addSttDiagnostic("soundend");
     setVolumeLevel(0.2);
   });
 
   recognition.addEventListener("speechstart", () => {
-    sttSpeechStartCount += 1;
-    addSttDiagnostic("speechstart");
     setVolumeLevel(0.85);
     setStatus("Speech detected...", "settings_voice");
   });
 
   recognition.addEventListener("speechend", () => {
-    addSttDiagnostic("speechend");
     setVolumeLevel(0.25);
   });
 
   recognition.addEventListener("audioend", () => {
-    addSttDiagnostic("audioend");
     setVolumeLevel(0);
   });
 
   recognition.addEventListener("nomatch", () => {
-    addSttDiagnostic("nomatch", "Chrome heard audio but returned no transcript match");
     setStatus("Speech heard, but no transcript match.", "settings_voice");
   });
 
   recognition.addEventListener("result", (event) => {
-    sttResultCount += 1;
-    addSttDiagnostic("result", `${event.results.length} result item${event.results.length === 1 ? "" : "s"}`);
     setStatus("Transcribing speech...", "settings_voice");
     let finalText = "";
     let interimText = "";
@@ -533,17 +475,12 @@ function startSpeechRecognition() {
       }
     }
     if (finalText) {
-      addSttDiagnostic("final", finalText);
       appendTranscript(finalText);
-    }
-    if (interimText) {
-      addSttDiagnostic("interim", interimText);
     }
     setInterimTranscript(interimText);
   });
 
   recognition.addEventListener("error", (event) => {
-    addSttDiagnostic("error", describeSpeechError(event));
     if (event.error === "no-speech") {
       setStatus("Listening for speech...", "settings_voice");
       return;
@@ -553,8 +490,6 @@ function startSpeechRecognition() {
   });
 
   recognition.addEventListener("end", () => {
-    addSttDiagnostic("end");
-    clearSttWatchdog();
     recognition = null;
     if (recognitionActive) {
       window.setTimeout(() => {
@@ -576,10 +511,8 @@ function startSpeechRecognition() {
 
   try {
     recognition.start();
-    addSttDiagnostic("start-requested");
     return true;
   } catch (error) {
-    addSttDiagnostic("start-exception", error.message || String(error));
     setStatus(error.message || "Speech recognition could not start.", "error");
     return false;
   }
@@ -589,15 +522,9 @@ async function startRecording() {
   if (!SpeechRecognition) {
     transcriptText.textContent = "Chrome speech recognition is unavailable.";
     setStatus("Open this page in Chrome to use Auto.", "error");
-    addSttDiagnostic("unsupported", "Open this page in Chrome with Web Speech support");
     return;
   }
 
-  sttEventLog = [];
-  sttResultCount = 0;
-  sttSpeechStartCount = 0;
-  addSttDiagnostic("tap", `${navigator.userAgent}`);
-  addSttDiagnostic("mode", "short Web Speech sessions; no separate microphone stream");
   transcriptBuffer = "";
   interimTranscript = "";
   stoppedByUser = false;

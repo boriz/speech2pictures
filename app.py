@@ -1,7 +1,6 @@
 import os
 import io
 import base64
-import tempfile
 
 from flask import (
     Flask,
@@ -19,11 +18,7 @@ from database import database
 
 app = Flask(__name__)
 
-# Misc variables
-#temp_file = os.path.join("static", "tmp.png")
 image_generator = None
-audio_model = None
-audio_model_name = None
 images_db = database(config)
 AUTO_TRANSCRIPT_TARGET_CHARS_DEFAULT = 200
 
@@ -37,89 +32,6 @@ def get_image_generator():
         image_generator = image_gen(config)
 
     return image_generator
-
-
-def get_whisper_model_name():
-    if config.model_name != "large" and config.english_language:
-        return config.model_name + ".en"
-    return config.model_name
-
-
-def get_audio_model():
-    global audio_model
-    global audio_model_name
-
-    model_name = get_whisper_model_name()
-    if audio_model is None or audio_model_name != model_name:
-        import whisper
-
-        audio_model = whisper.load_model(model_name)
-        audio_model_name = model_name
-
-    return audio_model
-
-
-def whisper_fp16_enabled():
-    import torch
-
-    return torch.cuda.is_available()
-
-
-def get_upload_suffix(upload):
-    _, filename_ext = os.path.splitext(upload.filename or "")
-    filename_ext = filename_ext.lower()
-    allowed_extensions = {
-        ".flac",
-        ".m4a",
-        ".mp3",
-        ".mp4",
-        ".mpeg",
-        ".oga",
-        ".ogg",
-        ".opus",
-        ".wav",
-        ".webm",
-    }
-    if filename_ext in allowed_extensions:
-        return filename_ext
-
-    content_type_suffixes = {
-        "audio/flac": ".flac",
-        "audio/m4a": ".m4a",
-        "audio/mp4": ".m4a",
-        "audio/mpeg": ".mp3",
-        "audio/ogg": ".ogg",
-        "audio/opus": ".opus",
-        "audio/wav": ".wav",
-        "audio/webm": ".webm",
-        "audio/x-m4a": ".m4a",
-        "audio/x-wav": ".wav",
-        "video/mp4": ".mp4",
-        "video/webm": ".webm",
-    }
-    return content_type_suffixes.get(upload.content_type, ".webm")
-
-
-def transcribe_audio_upload(upload):
-    temp_file = tempfile.NamedTemporaryFile(
-        suffix=get_upload_suffix(upload),
-        delete=False,
-    )
-    temp_file_path = temp_file.name
-    temp_file.close()
-
-    try:
-        upload.save(temp_file_path)
-        result = get_audio_model().transcribe(
-            temp_file_path,
-            fp16=whisper_fp16_enabled(),
-        )
-        return result.get("text", "").strip()
-    finally:
-        try:
-            os.unlink(temp_file_path)
-        except OSError:
-            pass
 
 
 def render_image_page(
@@ -322,40 +234,6 @@ def auto():
     return render_auto_page()
 
 
-@app.route('/auto/transcribe', methods=['POST'])
-def auto_transcribe():
-    audio_file = (
-        request.files.get("audio")
-        or request.files.get("file")
-        or request.files.get("recording")
-    )
-    if audio_file is None:
-        return jsonify({
-            "implemented": True,
-            "message": "No audio recording was received.",
-            "transcript": "",
-        }), 400
-
-    try:
-        transcript = transcribe_audio_upload(audio_file)
-    except Exception as exc:
-        return jsonify({
-            "implemented": True,
-            "message": "Speech-to-text failed: " + str(exc),
-            "transcript": "",
-        }), 500
-
-    message = "Recording transcribed."
-    if transcript == "":
-        message = "Recording processed, but no speech was transcribed."
-
-    return jsonify({
-        "implemented": True,
-        "message": message,
-        "transcript": transcript,
-    })
-
-
 @app.route('/auto/generate', methods=['POST'])
 def auto_generate():
     payload = request.get_json(silent=True) or {}
@@ -423,11 +301,6 @@ def auto_generate():
 @app.route('/manual')
 def manual():
     return render_manual_page()
-
-
-@app.route('/mobile_generate.html')
-def mobile_generate():
-    return redirect(url_for("manual"))
 
 
 @app.route('/favicon.ico')
