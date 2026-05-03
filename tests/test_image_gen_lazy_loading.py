@@ -109,12 +109,16 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
             image_gen_module.DPMSolverMultistepScheduler,
             "from_config",
             return_value=FakeScheduler(),
+        ), patch.object(
+            image_gen_module.torch.cuda,
+            "is_available",
+            return_value=True,
         ):
             generator = image_gen_module.image_gen(config)
 
-            self.assertEqual(base_loader.call_count, 1)
+            self.assertEqual(base_loader.call_count, 0)
+            self.assertIsNone(generator.pipe)
             self.assertIsNone(generator.img2img_pipe)
-            self.assertIsNone(generator.pipe.watermark)
 
             image = generator.generate_image(
                 "Title",
@@ -125,6 +129,7 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
             self.assertIsNotNone(image)
             self.assertEqual(base_loader.call_count, 1)
             self.assertIsNotNone(generator.pipe)
+            self.assertIsNone(generator.pipe.watermark)
             self.assertIsNone(generator.img2img_pipe)
 
             image = generator.generate_image(
@@ -178,14 +183,17 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
         ):
             generator = image_gen_module.image_gen(config)
 
-            self.assertEqual(compile_mock.call_count, 1)
-            self.assertTrue(generator._text2img_unet_compiled)
-            self.assertTrue(generator._text2img_unet_channels_last)
-            self.assertIsNone(generator.pipe.watermark)
+            self.assertEqual(compile_mock.call_count, 0)
+            self.assertFalse(generator._text2img_unet_compiled)
+            self.assertFalse(generator._text2img_unet_channels_last)
+            self.assertIsNone(generator.pipe)
             self.assertFalse(generator._using_xformers)
 
             generator.generate_image("Title", "Style", "Description")
             self.assertEqual(compile_mock.call_count, 1)
+            self.assertTrue(generator._text2img_unet_compiled)
+            self.assertTrue(generator._text2img_unet_channels_last)
+            self.assertIsNone(generator.pipe.watermark)
 
             temp_dir = tempfile.TemporaryDirectory()
             self.addCleanup(temp_dir.cleanup)
@@ -237,6 +245,11 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
             create=True,
         ):
             generator = image_gen_module.image_gen(config)
+
+            self.assertFalse(generator._text2img_unet_channels_last)
+            self.assertIsNone(generator.pipe)
+
+            generator.generate_image("Title", "Style", "Description")
 
             self.assertTrue(generator._text2img_unet_channels_last)
             self.assertEqual(
@@ -294,10 +307,15 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
             self.assertFalse(generator.image_enable_channels_last)
             self.assertTrue(generator.image_enable_xformers)
             self.assertFalse(generator._using_attention_slicing)
-            self.assertTrue(generator._using_sequential_cpu_offload)
+            self.assertFalse(generator._using_sequential_cpu_offload)
             self.assertFalse(generator._text2img_unet_compiled)
             self.assertFalse(generator._text2img_unet_channels_last)
             self.assertEqual(compile_mock.call_count, 0)
+            self.assertIsNone(generator.pipe)
+
+            generator.generate_image("Title", "Style", "Description")
+
+            self.assertTrue(generator._using_sequential_cpu_offload)
             self.assertEqual(generator.pipe.unet.to_calls, [])
             self.assertIsNone(generator.pipe.watermark)
 

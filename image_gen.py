@@ -1,5 +1,7 @@
 import gc
 from contextlib import nullcontext
+import warnings
+
 import openai
 import re
 
@@ -7,6 +9,15 @@ import torch
 
 from PIL import Image
 from config import config
+
+# accelerate imports pkg_resources internally on this pinned stack.
+warnings.filterwarnings(
+    "ignore",
+    message="pkg_resources is deprecated as an API.*",
+    category=UserWarning,
+    module="accelerate\\.utils\\.torch_xla",
+)
+
 from diffusers import (
     DPMSolverMultistepScheduler,
     StableDiffusionXLImg2ImgPipeline,
@@ -116,11 +127,8 @@ class image_gen:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
-        # Keep the text-to-image pipeline ready. Load img2img lazily.
-        self.pipe = self._build_pipeline(
-            StableDiffusionXLPipeline,
-        )
-        self.pipe = self._activate_pipeline("text2img")
+        # Load image pipelines only when image generation is requested.
+        self.pipe = None
         self.img2img_pipe = None
 
 
@@ -329,6 +337,13 @@ class image_gen:
 
 
     def generate_image(self, title, style, description, source_image = None):
+        if self.device != "cuda":
+            raise RuntimeError(
+                "CUDA is not available. Image generation requires local "
+                "GPU/CUDA; activate the project environment and verify the "
+                "WSL CUDA driver setup."
+            )
+
         # assemble the image prompt
         image_prompt = title + ". (" + style + "): " + description
         print("========================================")

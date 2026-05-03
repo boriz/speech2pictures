@@ -1,0 +1,249 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Speech2Pictures - Manual</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#283044",
+                      "surface-tint": "#d0bcff",
+                      "tertiary-container": "#8691a7",
+                      "secondary-container": "#3f465c",
+                      "primary": "#d0bcff",
+                      "on-primary-fixed": "#23005c",
+                      "error": "#ffb4ab",
+                      "surface-container": "#1d2022",
+                      "secondary-fixed-dim": "#bec6e0",
+                      "on-tertiary-fixed": "#111c2d",
+                      "outline": "#958ea0",
+                      "inverse-on-surface": "#2d3133",
+                      "surface-dim": "#101415",
+                      "tertiary-fixed-dim": "#bcc7de",
+                      "on-secondary-container": "#adb4ce",
+                      "surface-variant": "#323537",
+                      "inverse-surface": "#e0e3e5",
+                      "surface-bright": "#363a3b",
+                      "on-background": "#e0e3e5",
+                      "on-tertiary": "#263143",
+                      "primary-fixed-dim": "#d0bcff",
+                      "surface": "#101415",
+                      "inverse-primary": "#6d3bd7",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#494454",
+                      "primary-fixed": "#e9ddff",
+                      "surface-container-highest": "#323537",
+                      "on-surface": "#e0e3e5",
+                      "surface-container-lowest": "#0b0f10",
+                      "on-primary-fixed-variant": "#5516be",
+                      "on-primary": "#3c0091",
+                      "on-primary-container": "#340080",
+                      "on-error": "#690005",
+                      "secondary-fixed": "#dae2fd",
+                      "surface-container-low": "#191c1e",
+                      "error-container": "#93000a",
+                      "on-secondary-fixed-variant": "#3f465c",
+                      "primary-container": "#a078ff",
+                      "secondary": "#bec6e0",
+                      "tertiary": "#bcc7de",
+                      "background": "#101415",
+                      "on-secondary-fixed": "#131b2e",
+                      "on-tertiary-container": "#1f2a3c",
+                      "tertiary-fixed": "#d8e3fb",
+                      "surface-container-high": "#272a2c",
+                      "on-surface-variant": "#cbc3d7",
+                      "on-tertiary-fixed-variant": "#3c475a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "container-margin": "20px",
+                      "unit": "4px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "lg": "24px",
+                      "xl": "40px",
+                      "gutter": "12px"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Space Grotesk"
+                      ],
+                      "headline-md": [
+                              "Space Grotesk"
+                      ],
+                      "body-md": [
+                              "Manrope"
+                      ],
+                      "label-md": [
+                              "Manrope"
+                      ],
+                      "body-lg": [
+                              "Manrope"
+                      ],
+                      "label-sm": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+    summary {
+      list-style: none;
+    }
+    summary::-webkit-details-marker {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-[80px] pt-[64px]">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full h-16 flex items-center justify-between px-5 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_20px_rgba(139,92,246,0.1)]">
+<details class="relative">
+<summary class="text-violet-500 hover:text-violet-300 transition-colors active:scale-95 duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="menu" style="">menu</span>
+</summary>
+<div class="absolute left-0 top-10 w-44 rounded-lg border border-white/10 bg-slate-950/95 shadow-xl shadow-black/40 overflow-hidden font-['Manrope'] text-sm">
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('auto') }}">Auto</a>
+<a class="block px-4 py-3 text-violet-300 bg-violet-500/10" href="{{ url_for('manual') }}">Manual</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('history_index') }}">History</a>
+</div>
+</details>
+<div class="font-['Space_Grotesk'] font-bold tracking-tight text-xl font-black text-slate-50" style="">Manual</div>
+<div class="w-6"></div>
+</header>
+<!-- Main Content -->
+<main class="px-container-margin py-md space-y-lg max-w-2xl mx-auto">
+<!-- Image Preview Area -->
+<div class="w-full aspect-square rounded-xl bg-surface-variant border border-outline-variant flex items-center justify-center relative overflow-hidden group shadow-lg shadow-black/50">
+{% if Image %}
+<img src="data:image/jpeg;base64,{{ Image }}" class="absolute inset-0 w-full h-full object-cover z-10" alt="Generated Image">
+{% else %}
+<div class="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant space-y-sm">
+<span class="material-symbols-outlined text-4xl opacity-50" data-icon="image" style="">image</span>
+<p class="font-body-md text-on-surface-variant opacity-70" style="">Awaiting prompt...</p>
+</div>
+{% endif %}
+</div>
+<!-- Input Section -->
+{% if Message %}
+<div class="rounded-lg border border-outline-variant bg-surface-container-high p-sm font-body-md text-on-surface">
+{{ Message }}
+</div>
+{% endif %}
+<form class="space-y-md" action="{{ url_for('manual_txt2img') }}" method="post">
+<!-- Transcript Input -->
+<div class="space-y-sm">
+<label class="font-label-md text-on-surface block" for="transcript" style="">Transcript</label>
+<textarea class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors resize-none p-sm" id="transcript" name="Transcript" placeholder="Paste dialogue or narrative here..." rows="3">{{ TranscriptValue|default('') }}</textarea>
+</div>
+<!-- Advanced Inputs -->
+<div class="bg-surface-container-high rounded-xl p-md space-y-md border border-outline-variant/30">
+<div class="flex items-center justify-between mb-sm">
+<h3 class="font-label-md text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-[18px]" data-icon="tune" style="">tune</span>
+                        Direct Controls
+                     </h3>
+</div>
+<div class="space-y-sm">
+<label class="font-label-sm text-on-surface-variant block" for="title" style="">Title</label>
+<input class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors px-sm py-2" id="title" name="Title" placeholder="Scene title..." type="text" value="{{ TitleValue|default('') }}">
+</div><div class="space-y-sm">
+<label class="font-label-sm text-on-surface-variant block" for="style" style="">Style</label>
+<input class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors px-sm py-2" id="style" name="Style" placeholder="e.g. Cinematic, Anime, Photoreal" type="text" value="{{ StyleValue|default('') }}">
+</div>
+<div class="space-y-sm">
+<label class="font-label-sm text-on-surface-variant block" for="description" style="">Description</label>
+<textarea class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors resize-none p-sm" id="description" name="Description" placeholder="Specific visual details..." rows="2">{{ DescriptionValue|default('') }}</textarea>
+</div>
+</div>
+{% if GeneratedAt %}
+<div class="rounded-lg border border-outline-variant/30 bg-surface-container p-sm font-body-md text-on-surface">
+<div class="font-label-sm text-on-surface-variant">Generated {{ GeneratedAt }}</div>
+</div>
+{% endif %}
+<!-- Generate Button -->
+<button type="submit" class="w-full bg-gradient-to-r from-inverse-primary to-primary-container text-white font-label-md py-4 rounded-lg shadow-[0_0_20px_rgba(139,92,246,0.15)] hover:shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all active:scale-[0.98] flex items-center justify-center gap-2" style="">
+<span class="material-symbols-outlined" data-icon="auto_awesome" style="font-variation-settings: &quot;FILL&quot; 1;">auto_awesome</span>
+                Generate Image
+            </button>
+<!-- History Navigation Controls (Placeholder logic) -->
+</form>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-safe-offset-2 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(139,92,246,0.15)] rounded-t-2xl md:hidden">
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('auto') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="bolt" style="">bolt</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">Auto</span>
+</a><a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-4 py-1 active:scale-90 duration-150" href="{{ url_for('manual') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="photo_library" style="">photo_library</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">Manual</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('history_index') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="history" style="">history</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">History</span>
+</a>
+</nav>
+</body></html>

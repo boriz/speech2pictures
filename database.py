@@ -56,6 +56,36 @@ class database:
         return transcript, title, style, description, img
 
 
+    def get_picture_with_timestamp(self, id):
+        with sqlite3.connect(self.db_file_name) as conn:
+            cursor = conn.cursor()
+            sql = "SELECT Transcript, Title, Style, Description, Image, Timestamp FROM tblImages WHERE ID = :id;"
+            param = {'id': id}
+            cursor.execute(sql, param)
+            row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        transcript, title, style, description, img_bytes, timestamp = row
+        img = Image.open(io.BytesIO(img_bytes))
+        return transcript, title, style, description, img, timestamp
+
+
+    def get_recent_pictures(self, limit=20):
+        with sqlite3.connect(self.db_file_name) as conn:
+            cursor = conn.cursor()
+            sql = "SELECT ID, Timestamp, Title, Image FROM tblImages ORDER BY ID DESC LIMIT :limit;"
+            cursor.execute(sql, {"limit": limit})
+            rows = cursor.fetchall()
+
+        pictures = []
+        for id, timestamp, title, img_bytes in rows:
+            img = Image.open(io.BytesIO(img_bytes))
+            pictures.append((id, timestamp, title, img))
+        return pictures
+
+
     def get_last_picture_id(self):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()

@@ -50,12 +50,80 @@ def render_image_page(
     )
 
 
+def render_manual_page(
+    image_id=0,
+    image=None,
+    full_description="",
+    message="",
+    transcript="",
+    title="",
+    style="",
+    description="",
+    generated_at="",
+):
+    return render_template(
+        'mobile_generate.html',
+        ID=image_id,
+        Image=image,
+        FullDescription=full_description,
+        Message=message,
+        TranscriptValue=transcript,
+        TitleValue=title,
+        StyleValue=style,
+        DescriptionValue=description,
+        GeneratedAt=generated_at,
+    )
+
+
+def render_auto_page(message="Auto capture is not implemented yet."):
+    return render_template(
+        'mobile_auto.html',
+        Message=message,
+    )
+
+
+def render_history_page(selected_id=None, message=""):
+    records = images_db.get_recent_pictures()
+    images = []
+    selected = None
+
+    for id, timestamp, title, img in records:
+        item = {
+            "ID": id,
+            "Timestamp": timestamp,
+            "Title": title,
+            "Image": encode_image(img),
+        }
+        images.append(item)
+        if selected_id == id:
+            selected = item
+
+    if selected is None and images:
+        selected = images[0]
+
+    if selected is None and message == "":
+        message = "No images yet."
+
+    return render_template(
+        'mobile_history.html',
+        Images=images,
+        Selected=selected,
+        Message=message,
+    )
+
+
 def render_no_images_page():
     return render_image_page(0, message="No images yet.")
 
 
-def render_transcript_failure_page(transcript, title, style, description):
-    return render_image_page(
+def render_transcript_failure_page(
+    transcript,
+    title,
+    style,
+    description,
+    page_renderer=render_image_page,
+):
+    return page_renderer(
         0,
         message="Could not generate a title from the transcript. "
                 "Please edit the fields and try again.",
@@ -82,15 +150,63 @@ def build_full_description(title, style, description):
     return full_description
 
 
+def encode_image(img):
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format='JPEG')
+    return base64.b64encode(img_bytes.getvalue()).decode('utf-8')
+
+
+def render_manual_success_page(image_id):
+    record = images_db.get_picture_with_timestamp(image_id)
+    if record is None:
+        return render_manual_page(
+            0,
+            message="Generated image was saved, but could not be loaded.",
+        )
+
+    transcript, title, style, description, img, timestamp = record
+    return render_manual_page(
+        image_id,
+        image=encode_image(img),
+        full_description=build_full_description(title, style, description),
+        transcript=transcript,
+        title=title,
+        style=style,
+        description=description,
+        generated_at=timestamp,
+    )
+
+
 @app.route('/')
 @app.route('/index.html')
 def home():
     return redirect_to_last_history_or_empty_state()
 
 
+@app.route('/auto')
+def auto():
+    return render_auto_page()
+
+
+@app.route('/manual')
+def manual():
+    return render_manual_page()
+
+
+@app.route('/mobile_generate.html')
+def mobile_generate():
+    return redirect(url_for("manual"))
+
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',mimetype='image/vnd.microsoft.icon')
+
+
+@app.route('/history')
+def history_index():
+    selected_id = request.args.get("ID", type=int)
+    return render_history_page(selected_id)
 
 
 @app.route('/history/<int:ID>', methods=['GET', 'POST'])
@@ -124,16 +240,12 @@ def history (ID):
 
     transcript_last, title_last, style_last, description_last, img_last = record
 
-    img_bytes = io.BytesIO()
-    img_last.save(img_bytes, format='JPEG')
-    img_encoded = base64.b64encode(img_bytes.getvalue())
-
     full_description = build_full_description(title_last, style_last, description_last)
     print ("Image prompt: " + full_description)
 
     return render_image_page(
         id,
-        image=img_encoded.decode('utf-8'),
+        image=encode_image(img_last),
         full_description=full_description,
         transcript=transcript_last,
         title=title_last,
@@ -144,6 +256,18 @@ def history (ID):
 
 @app.route('/txt2img', methods=['POST'])
 def txt2img():
+    return handle_txt2img(render_image_page)
+
+
+@app.route('/manual/txt2img', methods=['POST'])
+def manual_txt2img():
+    return handle_txt2img(
+        render_manual_page,
+        success_renderer=render_manual_success_page,
+    )
+
+
+def handle_txt2img(failure_renderer, success_renderer=None):
     transcript = request.form.get('Transcript', '')
     title = request.form.get('Title', '')
     style = request.form.get('Style', '')
@@ -167,6 +291,7 @@ def txt2img():
                 title,
                 style,
                 description,
+                failure_renderer,
             )
 
         if generated_title.strip() == "":
@@ -175,6 +300,7 @@ def txt2img():
                 title,
                 style,
                 description,
+                failure_renderer,
             )
 
         title = generated_title
@@ -185,7 +311,7 @@ def txt2img():
         description_value = description.strip()
 
     if title_value == "":
-        return render_image_page(
+        return failure_renderer(
             0,
             message="Enter a title or transcript before generating an image.",
             transcript=transcript,
@@ -216,7 +342,7 @@ def txt2img():
         )
     except Exception as exc:
         print("Image generation failed: " + str(exc))
-        return render_image_page(
+        return failure_renderer(
             0,
             message="Image generation failed. Your form values were kept.",
             transcript=transcript,
@@ -224,6 +350,9 @@ def txt2img():
             style=style,
             description=description,
         )
+
+    if success_renderer is not None:
+        return success_renderer(new_id)
 
     return redirect(url_for("history", ID = new_id))
 
