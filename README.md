@@ -6,24 +6,36 @@ generated images.
 The app stores generated images in SQLite and uses:
 
 - OpenAI chat completions to turn transcript text into a structured prompt
+- Chrome speech recognition for browser speech-to-text
 - Stable Diffusion XL through Diffusers for image generation
 - a local CUDA-capable GPU for image generation
 
-## Web App
+## How the app should work
 
 The intended web app has three tabs:
 
-- **Auto**: browser microphone input is sent to the server, transcribed,
-  converted into a prompt, and used to generate images automatically.
+- **Auto**: acts like an AI picture frame. The user starts the
+  microphone, the app listens to background conversation, accumulates a
+  transcript buffer, shows buffer progress in the transcript heading,
+  and generates a picture when enough conversation has been captured.
+  The page should show the latest picture, its `Title (Style)`, and a
+  lightweight way to inspect the description.
 - **Manual**: the user enters transcript text or direct
   title/style/description fields and generates an image.
-- **History**: the user browses previously generated images.
+- **History**: the user browses previously generated images and opens
+  saved results.
 
 Both Auto and Manual should feed the same internal prompt shape:
 
 - `title`
 - `style`
 - `description`
+
+The Auto page uses Chrome speech recognition in the browser. The
+transcript buffer is displayed on the page with progress based on the
+configured target character count.
+When the buffer reaches the target size, Auto generates and saves a new
+image, updates the frame, and starts filling the next transcript buffer.
 
 ## Setup
 

@@ -14,6 +14,26 @@ summary {
 summary::-webkit-details-marker {
   display: none;
 }
+.volume-bar {
+  transform: scaleY(0);
+  opacity: 0.25;
+  transition: transform 80ms linear, opacity 80ms linear;
+}
+.metadata-popover {
+  position: relative;
+  display: inline-flex;
+}
+.metadata-popover-panel {
+  position: fixed;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(80px + 1rem);
+  z-index: 30;
+  width: auto;
+  max-height: min(18rem, 45vh);
+  overflow: auto;
+  white-space: pre-wrap;
+}
 </style>
 </head>
 <body class="bg-[#101415] text-slate-100 min-h-screen pb-[80px] pt-[64px]">
@@ -31,16 +51,75 @@ summary::-webkit-details-marker {
 <div class="font-['Space_Grotesk'] font-bold tracking-tight text-xl text-slate-50">Auto</div>
 <div class="w-6"></div>
 </header>
-<main class="px-5 py-4 space-y-6 max-w-2xl mx-auto">
-<div class="w-full aspect-square rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50">
-<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-2">
-<span class="material-symbols-outlined text-5xl opacity-60">mic</span>
-<p class="font-['Manrope'] text-base">{{ Message }}</p>
+<main class="px-5 py-4 space-y-5 max-w-2xl mx-auto">
+<section class="w-full aspect-square rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50" id="pictureFrame">
+{% if LatestImage %}
+<img src="data:image/jpeg;base64,{{ LatestImage.image }}" class="absolute inset-0 w-full h-full object-cover" alt="Latest generated image">
+<div class="absolute inset-x-0 bottom-0 bg-slate-950/80 backdrop-blur-md p-3">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300">
+{% if LatestImage.title or LatestImage.style %}
+<span class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50">
+{% if LatestImage.title %}{{ LatestImage.title }}{% endif %}{% if LatestImage.style %} ({{ LatestImage.style }}){% endif %}
+</span>
+{% endif %}
+{% if LatestImage.description %}
+<details class="metadata-popover">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">info</span>
+Description
+</summary>
+<p class="metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50">{{ LatestImage.description }}</p>
+</details>
+{% endif %}
+{% if LatestImage.transcript %}
+<details class="metadata-popover">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">notes</span>
+Transcript
+</summary>
+<p class="metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50">{{ LatestImage.transcript }}</p>
+</details>
+{% endif %}
+{% if LatestImage.timestamp %}
+<span class="text-slate-400">[{{ LatestImage.timestamp }}]</span>
+{% endif %}
 </div>
 </div>
-<a class="w-full bg-gradient-to-r from-violet-700 to-violet-500 text-white font-['Manrope'] font-semibold py-4 rounded-lg shadow-[0_0_20px_rgba(139,92,246,0.15)] flex items-center justify-center gap-2 active:scale-[0.98]" href="{{ url_for('manual') }}">
+{% else %}
+<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-3 px-6 text-center">
+<span class="material-symbols-outlined text-6xl opacity-60" id="frameIcon">mic</span>
+<p class="font-['Manrope'] text-base" id="frameText">No picture yet. Ready to record audio.</p>
+</div>
+{% endif %}
+</section>
+<section class="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
+<div class="grid grid-cols-[1fr_auto_auto] items-center gap-3">
+<div class="min-w-0 font-['Manrope'] text-sm text-slate-300 truncate" id="statusText">Idle</div>
+<div class="flex h-7 items-end gap-1 text-violet-400" id="volumeMeter" aria-label="Microphone activity indicator">
+<span class="volume-bar block h-5 w-1.5 origin-bottom rounded-full bg-violet-400"></span>
+<span class="volume-bar block h-4 w-1.5 origin-bottom rounded-full bg-violet-300"></span>
+<span class="volume-bar block h-6 w-1.5 origin-bottom rounded-full bg-violet-400"></span>
+<span class="volume-bar block h-5 w-1.5 origin-bottom rounded-full bg-violet-300"></span>
+</div>
+<button class="h-11 w-11 rounded-lg bg-violet-600 text-white flex items-center justify-center active:scale-[0.98] disabled:opacity-50" id="micToggleButton" type="button" aria-label="Start recording">
+<span class="material-symbols-outlined" id="micToggleIcon">mic</span>
+</button>
+</div>
+</section>
+<section class="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-2">
+<div class="font-['Space_Grotesk'] text-lg font-semibold text-slate-50" id="transcriptHeading">Transcript (0%)</div>
+<div class="min-h-24 rounded-lg border border-slate-700 bg-slate-950/60 p-3 font-['Manrope'] text-sm text-slate-300 whitespace-pre-wrap" id="transcriptText">No transcript yet.</div>
+<details class="font-['Manrope'] text-xs text-slate-400">
+<summary class="inline-flex cursor-pointer items-center gap-1 text-violet-300">
+<span class="material-symbols-outlined text-[16px]">bug_report</span>
+STT diagnostics
+</summary>
+<div class="mt-2 max-h-32 overflow-auto rounded-lg border border-slate-700 bg-slate-950/60 p-2 whitespace-pre-wrap" id="sttDiagnostics">Idle</div>
+</details>
+</section>
+<a class="w-full bg-slate-800 text-slate-100 border border-slate-700 font-['Manrope'] font-semibold py-4 rounded-lg flex items-center justify-center gap-2 active:scale-[0.98]" href="{{ url_for('manual') }}">
 <span class="material-symbols-outlined">edit</span>
-Manual
+Open Manual
 </a>
 </main>
 <nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-2 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl md:hidden">
@@ -57,5 +136,512 @@ Manual
 <span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">History</span>
 </a>
 </nav>
+<script>
+const micToggleButton = document.getElementById("micToggleButton");
+const micToggleIcon = document.getElementById("micToggleIcon");
+const statusText = document.getElementById("statusText");
+const transcriptHeading = document.getElementById("transcriptHeading");
+const transcriptText = document.getElementById("transcriptText");
+const sttDiagnostics = document.getElementById("sttDiagnostics");
+const pictureFrame = document.getElementById("pictureFrame");
+const frameText = document.getElementById("frameText");
+const frameIcon = document.getElementById("frameIcon");
+const volumeMeter = document.getElementById("volumeMeter");
+const volumeBars = Array.from(volumeMeter.querySelectorAll(".volume-bar"));
+const autoTranscriptTargetChars = {{ AutoTranscriptTargetChars|int }};
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+let recognitionActive = false;
+let sttEventLog = [];
+let sttWatchdogTimer = null;
+let sttResultCount = 0;
+let sttSpeechStartCount = 0;
+let transcriptBuffer = "";
+let interimTranscript = "";
+let stoppedByUser = false;
+let isGeneratingPicture = false;
+let lastGenerationAttempt = "";
+let forceGenerateWhenReady = false;
+let generateAfterRecognitionEnd = false;
+
+function getTranscriptPercent() {
+  if (autoTranscriptTargetChars <= 0) {
+    return 0;
+  }
+  return Math.max(0, Math.min(
+    100,
+    Math.round((transcriptBuffer.length / autoTranscriptTargetChars) * 100),
+  ));
+}
+
+function updateTranscriptProgress() {
+  transcriptHeading.textContent = `Transcript (${getTranscriptPercent()}%)`;
+}
+
+function addSttDiagnostic(eventName, detail = "") {
+  const timestamp = new Date().toLocaleTimeString();
+  const line = `[${timestamp}] ${eventName}${detail ? `: ${detail}` : ""}`;
+  sttEventLog = [...sttEventLog.slice(-11), line];
+  sttDiagnostics.textContent = sttEventLog.join("\n");
+  window.speech2PicturesSttLog = sttEventLog;
+}
+
+function describeSpeechError(event) {
+  const error = event.error || "unknown";
+  const message = event.message ? ` ${event.message}` : "";
+  const descriptions = {
+    "aborted": "Speech recognition was aborted.",
+    "audio-capture": "Chrome could not capture audio for speech recognition.",
+    "language-not-supported": "Chrome does not support this recognition language.",
+    "network": "Chrome speech recognition could not reach its recognition service.",
+    "no-speech": "Chrome did not detect speech.",
+    "not-allowed": "Chrome blocked speech recognition permission or policy.",
+    "phrases-not-supported": "Chrome does not support phrase biasing here.",
+    "service-not-allowed": "Chrome blocked or does not provide the speech recognition service.",
+  };
+  return `${error}. ${descriptions[error] || "Chrome did not provide a detailed reason."}${message}`;
+}
+
+function clearSttWatchdog() {
+  if (sttWatchdogTimer) {
+    window.clearTimeout(sttWatchdogTimer);
+    sttWatchdogTimer = null;
+  }
+}
+
+function startSttWatchdog() {
+  clearSttWatchdog();
+  sttWatchdogTimer = window.setTimeout(() => {
+    if (recognitionActive && sttResultCount === 0) {
+      const detail = sttSpeechStartCount > 0
+        ? "speech was detected, but Chrome has not returned transcript text"
+        : "recognition is running, but Chrome has not emitted speech or transcript events";
+      addSttDiagnostic("watchdog", detail);
+      setStatus(`Speech recognition active; ${detail}.`, "settings_voice");
+    }
+  }, 10000);
+}
+
+function renderTranscriptText() {
+  const visibleTranscript = [transcriptBuffer, interimTranscript]
+    .filter((part) => part.trim() !== "")
+    .join(" ")
+    .trim();
+  transcriptText.textContent = visibleTranscript || "Listening for speech.";
+}
+
+function appendTranscript(text) {
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    updateTranscriptProgress();
+    return;
+  }
+  transcriptBuffer = transcriptBuffer ? `${transcriptBuffer} ${cleanText}` : cleanText;
+  interimTranscript = "";
+  renderTranscriptText();
+  updateTranscriptProgress();
+  maybeGeneratePicture();
+}
+
+function setInterimTranscript(text) {
+  interimTranscript = (text || "").trim();
+  renderTranscriptText();
+}
+
+function setStatus(message, icon) {
+  statusText.textContent = message;
+  if (frameText) {
+    frameText.textContent = message;
+  }
+  if (frameIcon && icon) {
+    frameIcon.textContent = icon;
+  }
+}
+
+function setMicButtonRecording(isRecording) {
+  micToggleButton.disabled = false;
+  micToggleButton.setAttribute(
+    "aria-label",
+    isRecording ? "Stop recording" : "Start recording",
+  );
+  micToggleIcon.textContent = isRecording ? "stop_circle" : "mic";
+  micToggleButton.classList.toggle("bg-red-600", isRecording);
+  micToggleButton.classList.toggle("bg-violet-600", !isRecording);
+}
+
+function setVolumeLevel(level) {
+  const clampedLevel = Math.max(0, Math.min(1, level));
+  volumeBars.forEach((bar, index) => {
+    const offset = index / Math.max(1, volumeBars.length - 1);
+    const barLevel = Math.min(1, clampedLevel * (0.7 + offset * 0.6));
+    bar.style.transform = `scaleY(${barLevel})`;
+    bar.style.opacity = String(0.25 + barLevel * 0.75);
+  });
+}
+
+function resetVolumeMeter() {
+  setVolumeLevel(0);
+}
+
+function renderGeneratedPicture(picture) {
+  if (!pictureFrame || !picture) {
+    return;
+  }
+
+  pictureFrame.innerHTML = "";
+
+  const image = document.createElement("img");
+  image.src = `data:image/jpeg;base64,${picture.image}`;
+  image.className = "absolute inset-0 w-full h-full object-cover";
+  image.alt = "Latest generated image";
+  pictureFrame.appendChild(image);
+
+  const overlay = document.createElement("div");
+  overlay.className = "absolute inset-x-0 bottom-0 bg-slate-950/80 backdrop-blur-md p-3";
+
+  const metadataRow = document.createElement("div");
+  metadataRow.className = "flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300";
+
+  if (picture.title || picture.style) {
+    const title = document.createElement("div");
+    title.className = "font-['Space_Grotesk'] text-sm font-semibold text-slate-50";
+    title.textContent = `${picture.title || ""}${picture.style ? ` (${picture.style})` : ""}`;
+    metadataRow.appendChild(title);
+  }
+
+  if (picture.description) {
+    const details = document.createElement("details");
+    details.className = "metadata-popover";
+
+    const summary = document.createElement("summary");
+    summary.className = "inline-flex items-center gap-1 text-violet-300 cursor-pointer";
+
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-[16px]";
+    icon.textContent = "info";
+
+    summary.appendChild(icon);
+    summary.appendChild(document.createTextNode("Description"));
+
+    const description = document.createElement("p");
+    description.className = "metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50";
+    description.textContent = picture.description;
+
+    details.appendChild(summary);
+    details.appendChild(description);
+    metadataRow.appendChild(details);
+  }
+
+  if (picture.transcript) {
+    const details = document.createElement("details");
+    details.className = "metadata-popover";
+
+    const summary = document.createElement("summary");
+    summary.className = "inline-flex items-center gap-1 text-violet-300 cursor-pointer";
+
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-[16px]";
+    icon.textContent = "notes";
+
+    summary.appendChild(icon);
+    summary.appendChild(document.createTextNode("Transcript"));
+
+    const transcript = document.createElement("p");
+    transcript.className = "metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50";
+    transcript.textContent = picture.transcript;
+
+    details.appendChild(summary);
+    details.appendChild(transcript);
+    metadataRow.appendChild(details);
+  }
+
+  if (picture.timestamp) {
+    const timestamp = document.createElement("span");
+    timestamp.className = "text-slate-400";
+    timestamp.textContent = `[${picture.timestamp}]`;
+    metadataRow.appendChild(timestamp);
+  }
+
+  overlay.appendChild(metadataRow);
+  pictureFrame.appendChild(overlay);
+}
+
+function flushInterimTranscript() {
+  const cleanInterim = interimTranscript.trim();
+  if (cleanInterim) {
+    transcriptBuffer = transcriptBuffer ? `${transcriptBuffer} ${cleanInterim}` : cleanInterim;
+    interimTranscript = "";
+    renderTranscriptText();
+    updateTranscriptProgress();
+  }
+}
+
+function claimTranscriptForGeneration() {
+  flushInterimTranscript();
+  const transcriptSnapshot = transcriptBuffer.trim();
+  if (!transcriptSnapshot || transcriptSnapshot === lastGenerationAttempt) {
+    return "";
+  }
+  transcriptBuffer = "";
+  interimTranscript = "";
+  renderTranscriptText();
+  updateTranscriptProgress();
+  lastGenerationAttempt = transcriptSnapshot;
+  return transcriptSnapshot;
+}
+
+async function generatePictureFromTranscript(transcriptSnapshot) {
+  isGeneratingPicture = true;
+  setStatus("Generating picture...", "image");
+
+  try {
+    const response = await fetch("{{ url_for('auto_generate') }}", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({transcript: transcriptSnapshot}),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.message || "Image generation failed.");
+    }
+
+    renderGeneratedPicture(payload.picture);
+    lastGenerationAttempt = "";
+    setStatus(
+      recognitionActive
+        ? "Picture generated. Listening for more speech."
+        : "Picture generated.",
+      recognitionActive ? "settings_voice" : "mic",
+    );
+  } catch (error) {
+    setStatus(error.message || "Image generation failed.", "error");
+  } finally {
+    isGeneratingPicture = false;
+    if (forceGenerateWhenReady) {
+      generatePictureFromBuffer(true);
+    } else {
+      maybeGeneratePicture();
+    }
+  }
+}
+
+function generatePictureFromBuffer(force = false) {
+  if (isGeneratingPicture) {
+    forceGenerateWhenReady = forceGenerateWhenReady || force;
+    return false;
+  }
+  const transcriptSnapshot = claimTranscriptForGeneration();
+  if (!transcriptSnapshot) {
+    forceGenerateWhenReady = false;
+    return false;
+  }
+  forceGenerateWhenReady = false;
+  generatePictureFromTranscript(transcriptSnapshot);
+  return true;
+}
+
+function maybeGeneratePicture() {
+  if (
+    !isGeneratingPicture
+    && getTranscriptPercent() >= 100
+  ) {
+    generatePictureFromBuffer();
+  }
+}
+
+function stopRecordingState() {
+  recognition = null;
+  recognitionActive = false;
+  clearSttWatchdog();
+  setMicButtonRecording(false);
+  resetVolumeMeter();
+}
+
+function startSpeechRecognition() {
+  if (!SpeechRecognition) {
+    transcriptText.textContent = "Chrome speech recognition is unavailable.";
+    setStatus("Speech recognition is unavailable.", "error");
+    addSttDiagnostic("unsupported", "SpeechRecognition API is missing");
+    return false;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.lang = "en-US";
+
+  recognition.addEventListener("start", () => {
+    addSttDiagnostic("start");
+    startSttWatchdog();
+    setVolumeLevel(0.2);
+    setStatus("Listening for speech...", "settings_voice");
+  });
+
+  recognition.addEventListener("audiostart", () => {
+    addSttDiagnostic("audiostart");
+    setVolumeLevel(0.3);
+    setStatus("Listening for speech...", "settings_voice");
+  });
+
+  recognition.addEventListener("soundstart", () => {
+    addSttDiagnostic("soundstart");
+    setVolumeLevel(0.55);
+  });
+
+  recognition.addEventListener("soundend", () => {
+    addSttDiagnostic("soundend");
+    setVolumeLevel(0.2);
+  });
+
+  recognition.addEventListener("speechstart", () => {
+    sttSpeechStartCount += 1;
+    addSttDiagnostic("speechstart");
+    setVolumeLevel(0.85);
+    setStatus("Speech detected...", "settings_voice");
+  });
+
+  recognition.addEventListener("speechend", () => {
+    addSttDiagnostic("speechend");
+    setVolumeLevel(0.25);
+  });
+
+  recognition.addEventListener("audioend", () => {
+    addSttDiagnostic("audioend");
+    setVolumeLevel(0);
+  });
+
+  recognition.addEventListener("nomatch", () => {
+    addSttDiagnostic("nomatch", "Chrome heard audio but returned no transcript match");
+    setStatus("Speech heard, but no transcript match.", "settings_voice");
+  });
+
+  recognition.addEventListener("result", (event) => {
+    sttResultCount += 1;
+    addSttDiagnostic("result", `${event.results.length} result item${event.results.length === 1 ? "" : "s"}`);
+    setStatus("Transcribing speech...", "settings_voice");
+    let finalText = "";
+    let interimText = "";
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      const text = result[0] ? result[0].transcript : "";
+      if (result.isFinal) {
+        finalText = `${finalText} ${text}`.trim();
+      } else {
+        interimText = `${interimText} ${text}`.trim();
+      }
+    }
+    if (finalText) {
+      addSttDiagnostic("final", finalText);
+      appendTranscript(finalText);
+    }
+    if (interimText) {
+      addSttDiagnostic("interim", interimText);
+    }
+    setInterimTranscript(interimText);
+  });
+
+  recognition.addEventListener("error", (event) => {
+    addSttDiagnostic("error", describeSpeechError(event));
+    if (event.error === "no-speech") {
+      setStatus("Listening for speech...", "settings_voice");
+      return;
+    }
+    recognitionActive = false;
+    setStatus(`Speech recognition failed: ${describeSpeechError(event)}`, "error");
+  });
+
+  recognition.addEventListener("end", () => {
+    addSttDiagnostic("end");
+    clearSttWatchdog();
+    recognition = null;
+    if (recognitionActive) {
+      window.setTimeout(() => {
+        if (recognitionActive && !recognition) {
+          startSpeechRecognition();
+        }
+      }, 250);
+    } else {
+      stopRecordingState();
+      if (stoppedByUser) {
+        setStatus("Recording stopped.", "mic");
+      }
+      if (generateAfterRecognitionEnd) {
+        generateAfterRecognitionEnd = false;
+        generatePictureFromBuffer(true);
+      }
+    }
+  });
+
+  try {
+    recognition.start();
+    addSttDiagnostic("start-requested");
+    return true;
+  } catch (error) {
+    addSttDiagnostic("start-exception", error.message || String(error));
+    setStatus(error.message || "Speech recognition could not start.", "error");
+    return false;
+  }
+}
+
+async function startRecording() {
+  if (!SpeechRecognition) {
+    transcriptText.textContent = "Chrome speech recognition is unavailable.";
+    setStatus("Open this page in Chrome to use Auto.", "error");
+    addSttDiagnostic("unsupported", "Open this page in Chrome with Web Speech support");
+    return;
+  }
+
+  sttEventLog = [];
+  sttResultCount = 0;
+  sttSpeechStartCount = 0;
+  addSttDiagnostic("tap", `${navigator.userAgent}`);
+  addSttDiagnostic("mode", "short Web Speech sessions; no separate microphone stream");
+  transcriptBuffer = "";
+  interimTranscript = "";
+  stoppedByUser = false;
+  generateAfterRecognitionEnd = false;
+  forceGenerateWhenReady = false;
+  recognitionActive = true;
+  updateTranscriptProgress();
+  renderTranscriptText();
+  setMicButtonRecording(true);
+  setStatus("Starting speech recognition...", "settings_voice");
+
+  if (!startSpeechRecognition()) {
+    recognitionActive = false;
+    stopRecordingState();
+    return;
+  }
+}
+
+function stopRecording() {
+  recognitionActive = false;
+  stoppedByUser = true;
+  if (recognition) {
+    generateAfterRecognitionEnd = true;
+    setStatus("Stopping recording...", "hourglass_empty");
+    recognition.stop();
+  } else {
+    stopRecordingState();
+    setStatus("Recording stopped.", "mic");
+    generateAfterRecognitionEnd = false;
+    generatePictureFromBuffer(true);
+  }
+}
+
+micToggleButton.addEventListener("click", () => {
+  if (recognitionActive || recognition) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+});
+
+resetVolumeMeter();
+updateTranscriptProgress();
+setMicButtonRecording(false);
+</script>
 </body>
 </html>

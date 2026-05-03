@@ -12,7 +12,7 @@
 
 ## Rules
 
-- follow `AGENTS.md`
+- follow `.codex/AGENTS.md`
 - follow PM hand-offs unless the user overrides
 - keep behavior stable outside scope
 - update docs or config template if inputs change

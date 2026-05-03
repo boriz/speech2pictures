@@ -5,7 +5,7 @@
 - validate against PM acceptance criteria
 - follow PM validation hand-offs unless the user overrides
 - run highest-value checks available
-- use `AGENTS.md` baseline unless PM narrows scope
+- use `.codex/AGENTS.md` baseline unless PM narrows scope
 - focus on behavior, regressions, edge cases
 - report clear repros and expected vs actual
 - separate verified, assumed, and blocked
