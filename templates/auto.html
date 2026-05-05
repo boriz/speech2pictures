@@ -7,6 +7,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="{{ url_for('static', filename='mobile_shell.css') }}" rel="stylesheet">
 <style>
 summary {
   list-style: none;
@@ -22,41 +23,53 @@ summary::-webkit-details-marker {
 .metadata-popover {
   position: relative;
   display: inline-flex;
+  align-items: center;
 }
 .metadata-popover-panel {
   position: fixed;
-  left: 0.75rem;
-  right: 0.75rem;
-  bottom: calc(80px + 1rem);
-  z-index: 30;
-  width: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 70;
+  width: min(22rem, calc(100vw - 2.5rem));
+  max-width: calc(100vw - 2.5rem);
   max-height: min(18rem, 45vh);
   overflow: auto;
   white-space: pre-wrap;
 }
 </style>
 </head>
-<body class="bg-[#101415] text-slate-100 min-h-screen pb-[80px] pt-[64px]">
-<header class="fixed top-0 left-0 w-full h-16 flex items-center justify-between px-5 z-50 bg-slate-900/80 backdrop-blur-xl border-b border-white/10">
+<body class="mobile-shell-body bg-[#101415] text-slate-100 h-dvh overflow-hidden">
+<header class="mobile-shell-topbar">
 <details class="relative">
 <summary class="text-violet-500 hover:text-violet-300 transition-colors active:scale-95 duration-200 cursor-pointer">
 <span class="material-symbols-outlined">menu</span>
 </summary>
-<div class="absolute left-0 top-10 w-44 rounded-lg border border-white/10 bg-slate-950/95 shadow-xl shadow-black/40 overflow-hidden font-['Manrope'] text-sm">
+<div class="absolute left-0 top-10 w-44 rounded-lg border border-white/10 bg-slate-950 shadow-xl shadow-black/40 overflow-hidden font-['Manrope'] text-sm">
 <a class="block px-4 py-3 text-violet-300 bg-violet-500/10" href="{{ url_for('auto') }}">Auto</a>
 <a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('manual') }}">Manual</a>
 <a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('history_index') }}">History</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800 border-t border-white/10" href="{{ url_for('logout') }}">Logout</a>
 </div>
 </details>
-<div class="font-['Space_Grotesk'] font-bold tracking-tight text-xl text-slate-50">Auto</div>
-<div class="w-6"></div>
+<div class="mobile-shell-topbar-title">Auto</div>
+<a class="mobile-shell-topbar-action" href="{{ url_for('logout') }}" aria-label="Logout">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+</a>
 </header>
-<main class="px-5 py-4 space-y-5 max-w-2xl mx-auto">
-<section class="w-full aspect-square rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center relative overflow-hidden shadow-lg shadow-black/50" id="pictureFrame">
-{% if LatestImage %}
-<img src="data:image/jpeg;base64,{{ LatestImage.image }}" class="absolute inset-0 w-full h-full object-cover" alt="Latest generated image">
-<div class="absolute inset-x-0 bottom-0 bg-slate-950/80 backdrop-blur-md p-3">
-<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300">
+<main class="mobile-shell-main mobile-shell-main-fixed left-1/2 top-14 bottom-[72px] md:bottom-[76px] -translate-x-1/2 w-full max-w-2xl grid grid-rows-[minmax(0,1.2fr)_auto_auto_minmax(6.75rem,0.4fr)] md:grid-rows-[minmax(0,1.45fr)_auto_auto_minmax(8.5rem,0.5fr)] overflow-hidden">
+<section class="shared-picture-section shared-picture-section-fixed min-h-0">
+{% set frame_id = "pictureFrame" %}
+{% set image_data = LatestImage.image if LatestImage else None %}
+{% set image_alt = "Latest generated image" %}
+{% set empty_icon = "mic" %}
+{% set empty_text = "No picture yet. Ready to record audio." %}
+{% set empty_icon_id = "frameIcon" %}
+{% set empty_text_id = "frameText" %}
+{% include "partials/picture_frame.html" %}
+</section>
+<section class="mobile-shell-card rounded-xl border border-slate-700 bg-slate-900 min-h-[3.25rem]" id="imageMetadataBlock">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300" id="imageMetadataRow">
 {% if LatestImage.title or LatestImage.style %}
 <span class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50">
 {% if LatestImage.title %}{{ LatestImage.title }}{% endif %}{% if LatestImage.style %} ({{ LatestImage.style }}){% endif %}
@@ -84,16 +97,9 @@ Transcript
 <span class="text-slate-400">[{{ LatestImage.timestamp }}]</span>
 {% endif %}
 </div>
-</div>
-{% else %}
-<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-3 px-6 text-center">
-<span class="material-symbols-outlined text-6xl opacity-60" id="frameIcon">mic</span>
-<p class="font-['Manrope'] text-base" id="frameText">No picture yet. Ready to record audio.</p>
-</div>
-{% endif %}
 </section>
-<section class="rounded-xl border border-slate-700 bg-slate-900/60 p-3">
-<div class="grid grid-cols-[1fr_auto_auto] items-center gap-3">
+<section class="mobile-shell-card rounded-xl border border-slate-700 bg-slate-900/60">
+<div class="grid grid-cols-[1fr_auto_auto] items-center gap-2">
 <div class="min-w-0 font-['Manrope'] text-sm text-slate-300 truncate" id="statusText">Idle</div>
 <div class="flex h-7 items-end gap-1 text-violet-400" id="volumeMeter" aria-label="Microphone activity indicator">
 <span class="volume-bar block h-5 w-1.5 origin-bottom rounded-full bg-violet-400"></span>
@@ -106,12 +112,12 @@ Transcript
 </button>
 </div>
 </section>
-<section class="rounded-xl border border-slate-700 bg-slate-900/60 p-4 space-y-2">
-<div class="font-['Space_Grotesk'] text-lg font-semibold text-slate-50" id="transcriptHeading">Transcript (0%)</div>
-<div class="min-h-24 rounded-lg border border-slate-700 bg-slate-950/60 p-3 font-['Manrope'] text-sm text-slate-300 whitespace-pre-wrap" id="transcriptText">No transcript yet.</div>
+<section class="mobile-shell-card h-full min-h-0 rounded-xl border border-slate-700 bg-slate-900/60 space-y-1.5 flex flex-col">
+<div class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50" id="transcriptHeading">Transcript (0%)</div>
+<div class="min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-slate-950/60 p-2 font-['Manrope'] text-sm font-normal text-slate-300 whitespace-pre-wrap" id="transcriptText">No transcript yet.</div>
 </section>
 </main>
-<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-2 pb-2 bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
+<nav class="mobile-shell-nav fixed bottom-0 left-1/2 w-full max-w-2xl -translate-x-1/2 z-50 flex justify-around items-center bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
 <a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-4 py-1 active:scale-90 duration-150" href="{{ url_for('auto') }}">
 <span class="material-symbols-outlined mb-1">bolt</span>
 <span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">Auto</span>
@@ -132,12 +138,19 @@ const statusText = document.getElementById("statusText");
 const transcriptHeading = document.getElementById("transcriptHeading");
 const transcriptText = document.getElementById("transcriptText");
 const pictureFrame = document.getElementById("pictureFrame");
+const imageMetadataRow = document.getElementById("imageMetadataRow");
 const frameText = document.getElementById("frameText");
 const frameIcon = document.getElementById("frameIcon");
 const volumeMeter = document.getElementById("volumeMeter");
 const volumeBars = Array.from(volumeMeter.querySelectorAll(".volume-bar"));
 const autoTranscriptTargetChars = {{ AutoTranscriptTargetChars|int }};
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const clientLogEndpoint = "{{ url_for('client_log') }}";
+const clientSessionId = (
+  window.crypto && typeof window.crypto.randomUUID === "function"
+    ? window.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
 
 let recognition = null;
 let recognitionActive = false;
@@ -148,6 +161,33 @@ let isGeneratingPicture = false;
 let lastGenerationAttempt = "";
 let forceGenerateWhenReady = false;
 let generateAfterRecognitionEnd = false;
+let previousFrameMarkup = pictureFrame ? pictureFrame.innerHTML : "";
+let statusResetTimer = null;
+
+function sendClientLog(eventName, level = "info", message = "", context = {}) {
+  const payload = {
+    event: eventName,
+    level,
+    message,
+    context: {
+      ...context,
+      sessionId: clientSessionId,
+    },
+  };
+  const body = JSON.stringify(payload);
+  if (navigator.sendBeacon) {
+    const blob = new Blob([body], {type: "application/json"});
+    if (navigator.sendBeacon(clientLogEndpoint, blob)) {
+      return;
+    }
+  }
+  fetch(clientLogEndpoint, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
 
 function getTranscriptPercent() {
   if (autoTranscriptTargetChars <= 0) {
@@ -215,6 +255,22 @@ function setStatus(message, icon) {
   }
 }
 
+function setTransientGenerationFailureStatus(message) {
+  if (statusResetTimer) {
+    window.clearTimeout(statusResetTimer);
+    statusResetTimer = null;
+  }
+  setStatus(message, "error");
+  statusResetTimer = window.setTimeout(() => {
+    if (recognitionActive) {
+      setStatus("Listening for speech...", "settings_voice");
+    } else {
+      setStatus("Recording stopped.", "mic");
+    }
+    statusResetTimer = null;
+  }, 4500);
+}
+
 function setMicButtonRecording(isRecording) {
   micToggleButton.disabled = false;
   micToggleButton.setAttribute(
@@ -241,7 +297,7 @@ function resetVolumeMeter() {
 }
 
 function renderGeneratedPicture(picture) {
-  if (!pictureFrame || !picture) {
+  if (!pictureFrame || !imageMetadataRow || !picture) {
     return;
   }
 
@@ -253,17 +309,13 @@ function renderGeneratedPicture(picture) {
   image.alt = "Latest generated image";
   pictureFrame.appendChild(image);
 
-  const overlay = document.createElement("div");
-  overlay.className = "absolute inset-x-0 bottom-0 bg-slate-950/80 backdrop-blur-md p-3";
-
-  const metadataRow = document.createElement("div");
-  metadataRow.className = "flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300";
+  imageMetadataRow.innerHTML = "";
 
   if (picture.title || picture.style) {
     const title = document.createElement("div");
     title.className = "font-['Space_Grotesk'] text-sm font-semibold text-slate-50";
     title.textContent = `${picture.title || ""}${picture.style ? ` (${picture.style})` : ""}`;
-    metadataRow.appendChild(title);
+    imageMetadataRow.appendChild(title);
   }
 
   if (picture.description) {
@@ -286,7 +338,7 @@ function renderGeneratedPicture(picture) {
 
     details.appendChild(summary);
     details.appendChild(description);
-    metadataRow.appendChild(details);
+    imageMetadataRow.appendChild(details);
   }
 
   if (picture.transcript) {
@@ -309,18 +361,39 @@ function renderGeneratedPicture(picture) {
 
     details.appendChild(summary);
     details.appendChild(transcript);
-    metadataRow.appendChild(details);
+    imageMetadataRow.appendChild(details);
   }
 
   if (picture.timestamp) {
     const timestamp = document.createElement("span");
     timestamp.className = "text-slate-400";
     timestamp.textContent = `[${picture.timestamp}]`;
-    metadataRow.appendChild(timestamp);
+    imageMetadataRow.appendChild(timestamp);
   }
 
-  overlay.appendChild(metadataRow);
-  pictureFrame.appendChild(overlay);
+  previousFrameMarkup = pictureFrame.innerHTML;
+}
+
+function renderGeneratingFrame() {
+  if (!pictureFrame) {
+    return;
+  }
+  previousFrameMarkup = pictureFrame.innerHTML;
+  pictureFrame.innerHTML = `
+    <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-900 text-slate-200">
+      <span class="frame-spinner block h-10 w-10 rounded-full border-4 border-violet-300/30 border-t-violet-300"></span>
+      <div class="font-['Manrope'] text-sm">Generating image...</div>
+    </div>
+  `;
+}
+
+function restorePreviousFrame() {
+  if (!pictureFrame) {
+    return;
+  }
+  if (previousFrameMarkup.trim() !== "") {
+    pictureFrame.innerHTML = previousFrameMarkup;
+  }
 }
 
 function flushInterimTranscript() {
@@ -349,9 +422,13 @@ function claimTranscriptForGeneration() {
 
 async function generatePictureFromTranscript(transcriptSnapshot) {
   isGeneratingPicture = true;
-  setStatus("Generating picture...", "image");
+  renderGeneratingFrame();
+  sendClientLog("auto_generate_start", "info", "", {
+    transcriptChars: transcriptSnapshot.length,
+  });
 
   try {
+    const requestStartedAt = performance.now();
     const response = await fetch("{{ url_for('auto_generate') }}", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
@@ -363,15 +440,22 @@ async function generatePictureFromTranscript(transcriptSnapshot) {
     }
 
     renderGeneratedPicture(payload.picture);
+    sendClientLog("auto_generate_success", "info", "", {
+      durationMs: Math.round(performance.now() - requestStartedAt),
+      imageId: payload.picture ? payload.picture.id : null,
+    });
     lastGenerationAttempt = "";
-    setStatus(
-      recognitionActive
-        ? "Picture generated. Listening for more speech."
-        : "Picture generated.",
-      recognitionActive ? "settings_voice" : "mic",
-    );
+    if (recognitionActive) {
+      setStatus("Listening for speech...", "settings_voice");
+    } else {
+      setStatus("Recording stopped.", "mic");
+    }
   } catch (error) {
-    setStatus(error.message || "Image generation failed.", "error");
+    restorePreviousFrame();
+    sendClientLog("auto_generate_failed", "error", error.message || "unknown error");
+    setTransientGenerationFailureStatus(
+      `Image generation failed: ${error.message || "unknown error"}`,
+    );
   } finally {
     isGeneratingPicture = false;
     if (forceGenerateWhenReady) {
@@ -429,6 +513,7 @@ function startSpeechRecognition() {
   recognition.addEventListener("start", () => {
     setVolumeLevel(0.2);
     setStatus("Listening for speech...", "settings_voice");
+    sendClientLog("stt_start");
   });
 
   recognition.addEventListener("audiostart", () => {
@@ -447,6 +532,7 @@ function startSpeechRecognition() {
   recognition.addEventListener("speechstart", () => {
     setVolumeLevel(0.85);
     setStatus("Speech detected...", "settings_voice");
+    sendClientLog("stt_speechstart");
   });
 
   recognition.addEventListener("speechend", () => {
@@ -459,6 +545,7 @@ function startSpeechRecognition() {
 
   recognition.addEventListener("nomatch", () => {
     setStatus("Speech heard, but no transcript match.", "settings_voice");
+    sendClientLog("stt_nomatch", "warning");
   });
 
   recognition.addEventListener("result", (event) => {
@@ -476,6 +563,9 @@ function startSpeechRecognition() {
     }
     if (finalText) {
       appendTranscript(finalText);
+      sendClientLog("stt_result_final", "info", "", {
+        chars: finalText.length,
+      });
     }
     setInterimTranscript(interimText);
   });
@@ -487,9 +577,16 @@ function startSpeechRecognition() {
     }
     recognitionActive = false;
     setStatus(`Speech recognition failed: ${describeSpeechError(event)}`, "error");
+    sendClientLog("stt_error", "error", describeSpeechError(event), {
+      code: event.error || "unknown",
+    });
   });
 
   recognition.addEventListener("end", () => {
+    sendClientLog("stt_end", "info", "", {
+      recognitionActive,
+      stoppedByUser,
+    });
     recognition = null;
     if (recognitionActive) {
       window.setTimeout(() => {
@@ -535,6 +632,9 @@ async function startRecording() {
   renderTranscriptText();
   setMicButtonRecording(true);
   setStatus("Starting speech recognition...", "settings_voice");
+  sendClientLog("stt_start_requested", "info", "", {
+    userAgent: navigator.userAgent,
+  });
 
   if (!startSpeechRecognition()) {
     recognitionActive = false;
@@ -546,6 +646,7 @@ async function startRecording() {
 function stopRecording() {
   recognitionActive = false;
   stoppedByUser = true;
+  sendClientLog("stt_stop_requested");
   if (recognition) {
     generateAfterRecognitionEnd = true;
     setStatus("Stopping recording...", "hourglass_empty");
@@ -563,6 +664,17 @@ micToggleButton.addEventListener("click", () => {
     stopRecording();
   } else {
     startRecording();
+  }
+});
+
+document.addEventListener("click", (event) => {
+  const popoverPanel = event.target.closest(".metadata-popover-panel");
+  if (!popoverPanel) {
+    return;
+  }
+  const popover = popoverPanel.closest("details");
+  if (popover) {
+    popover.open = false;
   }
 });
 

@@ -1,10 +1,13 @@
 import sqlite3
 import os
 import io
-import config
+import logging
 
 from PIL import Image
 from config import config
+
+HISTORY_RECENT_LIMIT_DEFAULT = 50
+LOGGER = logging.getLogger(__name__)
 
 
 class database:
@@ -22,9 +25,9 @@ class database:
 
         with sqlite3.connect(self.db_file_name) as conn:
             if db_is_new:
-                print ("Creating database: " + self.db_file_name)
+                LOGGER.info("database_create file=%s", self.db_file_name)
             else:
-                print ("Database already exists")
+                LOGGER.info("database_open file=%s", self.db_file_name)
             conn.execute(sql)
 
 
@@ -40,49 +43,108 @@ class database:
             return cursor.lastrowid
 
 
-    def get_picture(self, id):
+    def _decode_image(self, image_bytes, context):
+        try:
+            image = Image.open(io.BytesIO(image_bytes))
+            image.load()
+            return image
+        except Exception as exc:
+            LOGGER.error(
+                "database_image_decode_failed context=%s error=%s",
+                context,
+                str(exc),
+            )
+            return None
+
+
+    def get_picture(self, image_id):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
             sql = "SELECT Transcript, Title, Style, Description, Image FROM tblImages WHERE ID = :id;"
-            param = {'id': id}
+            param = {'id': image_id}
             cursor.execute(sql, param)
             row = cursor.fetchone()
 
         if row is None:
             return None
 
-        transcript, title, style, description, img_bytes = row
-        img = Image.open(io.BytesIO(img_bytes))
-        return transcript, title, style, description, img
+        transcript, title, style, description, image_bytes = row
+        image = self._decode_image(
+            image_bytes,
+            "get_picture image_id=" + str(image_id),
+        )
+        if image is None:
+            return None
+        return transcript, title, style, description, image
 
 
-    def get_picture_with_timestamp(self, id):
+    def get_picture_with_timestamp(self, image_id):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
             sql = "SELECT Transcript, Title, Style, Description, Image, Timestamp FROM tblImages WHERE ID = :id;"
-            param = {'id': id}
+            param = {'id': image_id}
             cursor.execute(sql, param)
             row = cursor.fetchone()
 
         if row is None:
             return None
 
-        transcript, title, style, description, img_bytes, timestamp = row
-        img = Image.open(io.BytesIO(img_bytes))
-        return transcript, title, style, description, img, timestamp
+        transcript, title, style, description, image_bytes, timestamp = row
+        image = self._decode_image(
+            image_bytes,
+            "get_picture_with_timestamp image_id=" + str(image_id),
+        )
+        if image is None:
+            return None
+        return transcript, title, style, description, image, timestamp
 
 
-    def get_recent_pictures(self, limit=20):
+    def _resolve_recent_limit(self, limit):
+        configured_limit = limit
+        if configured_limit is None:
+            configured_limit = getattr(
+                config,
+                "history_recent_limit",
+                HISTORY_RECENT_LIMIT_DEFAULT,
+            )
+        try:
+            parsed_limit = int(configured_limit)
+        except (TypeError, ValueError):
+            return HISTORY_RECENT_LIMIT_DEFAULT
+
+        if parsed_limit <= 0:
+            return HISTORY_RECENT_LIMIT_DEFAULT
+
+        return parsed_limit
+
+
+    def get_recent_pictures(self, limit=None):
+        resolved_limit = self._resolve_recent_limit(limit)
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
-            sql = "SELECT ID, Timestamp, Title, Image FROM tblImages ORDER BY ID DESC LIMIT :limit;"
-            cursor.execute(sql, {"limit": limit})
+            sql = "SELECT ID, Timestamp, Title, Style, Description, Transcript, Image FROM tblImages ORDER BY ID DESC LIMIT :limit;"
+            cursor.execute(sql, {"limit": resolved_limit})
             rows = cursor.fetchall()
 
         pictures = []
-        for id, timestamp, title, img_bytes in rows:
-            img = Image.open(io.BytesIO(img_bytes))
-            pictures.append((id, timestamp, title, img))
+        for image_id, timestamp, title, style, description, transcript, image_bytes in rows:
+            image = self._decode_image(
+                image_bytes,
+                "get_recent_pictures image_id=" + str(image_id),
+            )
+            if image is None:
+                continue
+            pictures.append(
+                (
+                    image_id,
+                    timestamp,
+                    title,
+                    style,
+                    description,
+                    transcript,
+                    image,
+                )
+            )
         return pictures
 
 
@@ -97,20 +159,3 @@ class database:
             return None
 
         return row[0]
-
-
-if __name__ == "__main__":
-    # Basic test code
-    db_test = database(config)
-    img = Image.open("tmp.png")
-    id = db_test.add_picture("test transcript", "test title", "test style", "test description", img)
-    print("Saved to DB, id: " + str(id))
-
-    id_last = db_test.get_last_picture_id()
-    print("Last image: " + str(id_last))
-
-    picture = db_test.get_picture(1)
-    if picture is not None:
-        transcript, title, style, description, img = picture
-        print("Get picture with ID = 1: " + title)
-        img.save("db_test_1.jpg")

@@ -5,7 +5,6 @@
 Speech transcripts -> generated images.
 
 - `app.py`: Flask UI
-- `speech2pic_cli.py`: old mic CLI
 - `image_gen.py`: OpenAI + Diffusers
 - `database.py`: SQLite
 - `config.py`: local secrets, treat as local
@@ -41,8 +40,10 @@ Speech transcripts -> generated images.
 
 Start with:
 
-- `python3 -m py_compile app.py image_gen.py database.py speech2pic_cli.py`
+- `python3 -m py_compile app.py image_gen.py database.py`
 - targeted Flask route or CLI smoke checks when deps exist
+- when requested, run the `agent-skill-linter` skill on the repo/skill
+  targets and report actionable findings
 
 Call out blockers: missing deps, GPU, mic, secrets.
 
@@ -57,12 +58,23 @@ Call out blockers: missing deps, GPU, mic, secrets.
 - PM stays in the main thread.
 - Developer runs in a separate `worker` agent.
 - Tester runs in a separate `worker` agent.
+- For feature work, bugfixes, and any non-trivial code change:
+  - PM delegates implementation to Developer.
+  - PM then delegates validation to Tester.
+  - PM does not combine Developer and Tester execution in one context.
+- Main-thread direct coding is only for tiny non-code edits
+  (for example wording/doc touch-ups) or when the user explicitly asks for
+  a single-agent flow.
 - Skills guide those workers, but workers provide the actual context
   isolation.
 - PM dispatches work.
 - Developer reports back to PM.
 - PM sends tester work.
+- After PM integrates a worker result, PM closes that completed worker agent
+  before finalizing the next hand-off or user-facing summary.
 - Developer and tester follow PM hand-offs unless the user overrides.
+- Developer and tester must use `agent-skill-linter` when the task
+  includes skill/agent protocol files or explicitly asks for linting.
 - Review-only ownership:
   - PM: plans, process docs, branch/merge strategy, agent docs
   - Developer: code review, implementation risk

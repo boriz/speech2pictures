@@ -38,10 +38,15 @@ class FakeImageGenerator:
 def main():
     db_path = _require_env("SPEECH2PICTURES_TEST_DB_FILE")
     port = int(os.getenv("SPEECH2PICTURES_TEST_PORT", "5055"))
+    auth_password = os.getenv(
+        "SPEECH2PICTURES_TEST_AUTH_PASSWORD",
+        "browser-password",
+    )
 
     from config import config as app_config
 
     app_config.db_file_name = db_path
+    app_config.auth_passwords = [auth_password]
     sys.modules.pop("app", None)
     app_module = importlib.import_module("app")
     app_module.image_generator = FakeImageGenerator()

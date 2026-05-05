@@ -1,14 +1,14 @@
 import gc
+import json
+import logging
 from contextlib import nullcontext
 import warnings
 
 import openai
-import re
 
 import torch
 
 from PIL import Image
-from config import config
 
 # accelerate imports pkg_resources internally on this pinned stack.
 warnings.filterwarnings(
@@ -28,6 +28,7 @@ from diffusers import (
 class image_gen:
 
     def __init__(self, config):
+        self.logger = logging.getLogger(__name__)
         # Keep local variables
         self.gpt_prompt = config.gpt_prompt
         self.gpt_model = config.gpt_model
@@ -87,19 +88,19 @@ class image_gen:
 
         if self.image_enable_low_vram:
             if self.image_enable_torch_compile:
-                print(
+                self.logger.info(
                     "Disabling torch.compile because low-vram mode uses "
                     "sequential CPU offload."
                 )
                 self.image_enable_torch_compile = False
             if self.image_enable_channels_last:
-                print(
+                self.logger.info(
                     "Disabling channels_last because low-vram mode uses "
                     "sequential CPU offload."
                 )
                 self.image_enable_channels_last = False
             if self.image_enable_cpu_offload:
-                print(
+                self.logger.info(
                     "Ignoring model CPU offload because low-vram mode "
                     "uses sequential CPU offload instead."
                 )
@@ -107,7 +108,7 @@ class image_gen:
             self.image_enable_sequential_cpu_offload = True
 
         if self.image_enable_torch_compile and self.image_enable_xformers:
-            print(
+            self.logger.info(
                 "Disabling xformers because torch.compile is enabled; "
                 "this stack should use PyTorch SDPA instead."
             )
@@ -142,9 +143,12 @@ class image_gen:
         try:
             pipe.enable_xformers_memory_efficient_attention()
             self._using_xformers = True
-            print("Enabled xformers memory-efficient attention")
+            self.logger.info("image_pipeline_xformers_enabled")
         except Exception as exc:
-            print("xformers not available, continuing without it: " + str(exc))
+            self.logger.warning(
+                "image_pipeline_xformers_unavailable error=%s",
+                str(exc),
+            )
 
 
     def _build_pipeline(self, pipeline_class):
@@ -191,7 +195,7 @@ class image_gen:
         if self._text2img_unet_compiled:
             return
         if not hasattr(torch, "compile"):
-            print("torch.compile not available, continuing without it")
+            self.logger.warning("torch_compile_unavailable")
             return
         try:
             pipe.unet = torch.compile(
@@ -200,9 +204,12 @@ class image_gen:
                 fullgraph=True,
             )
             self._text2img_unet_compiled = True
-            print("Enabled torch.compile on UNet")
+            self.logger.info("torch_compile_enabled")
         except Exception as exc:
-            print("torch.compile not available, continuing without it: " + str(exc))
+            self.logger.warning(
+                "torch_compile_enable_failed error=%s",
+                str(exc),
+            )
 
 
     def _maybe_enable_unet_channels_last(self, pipe):
@@ -215,11 +222,11 @@ class image_gen:
         try:
             pipe.unet = pipe.unet.to(memory_format=torch.channels_last)
             self._text2img_unet_channels_last = True
-            print("Enabled channels_last memory format on UNet")
+            self.logger.info("channels_last_enabled")
         except Exception as exc:
-            print(
-                "channels_last not available, continuing without it: "
-                + str(exc)
+            self.logger.warning(
+                "channels_last_enable_failed error=%s",
+                str(exc),
             )
 
 
@@ -237,7 +244,10 @@ class image_gen:
         try:
             pipe.to("cpu")
         except Exception as exc:
-            print("Could not move pipeline to CPU: " + str(exc))
+            self.logger.warning(
+                "pipeline_release_to_cpu_failed error=%s",
+                str(exc),
+            )
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -263,9 +273,9 @@ class image_gen:
                 pipe.enable_model_cpu_offload()
                 self._using_model_cpu_offload = True
             except Exception as exc:
-                print(
-                    "CPU offload not available, continuing without it: "
-                    + str(exc)
+                self.logger.warning(
+                    "model_cpu_offload_unavailable error=%s",
+                    str(exc),
                 )
             self._active_pipe_name = pipeline_name
             return pipe
@@ -280,12 +290,11 @@ class image_gen:
             try:
                 pipe.enable_sequential_cpu_offload()
                 self._using_sequential_cpu_offload = True
-                print("Enabled sequential CPU offload for low-vram mode")
+                self.logger.info("sequential_cpu_offload_enabled")
             except Exception as exc:
-                print(
-                    "Sequential CPU offload not available, continuing "
-                    "without it: "
-                    + str(exc)
+                self.logger.warning(
+                    "sequential_cpu_offload_unavailable error=%s",
+                    str(exc),
                 )
             self._active_pipe_name = pipeline_name
             return pipe
@@ -311,29 +320,77 @@ class image_gen:
 
 
     def generate_title(self, transcript):
-        # create a chat completion
-        #print("GPT prompt: \n" + self.gpt_prompt + transcript)
+        # The prompt is configured to return strict JSON; parsing below
+        # intentionally fails hard for malformed responses.
+        chat_completion = openai.ChatCompletion.create(
+            model=self.gpt_model,
+            messages=[{
+                "role": "user",
+                "content": self.gpt_prompt + transcript,
+            }],
+        )
+
+        # Get the result
+        response_text = chat_completion.choices[0].message.content
+        self.logger.info(
+            "title_generation_response_received chars=%s",
+            len(response_text) if isinstance(response_text, str) else "n/a",
+        )
+
+        if not isinstance(response_text, str):
+            raise ValueError(
+                "Title generation response must be a JSON string; got "
+                + type(response_text).__name__
+            )
 
         try:
-            chat_completion = openai.ChatCompletion.create(model = self.gpt_model, messages=[{"role": "user", "content": self.gpt_prompt + transcript}])
+            payload = json.loads(response_text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "Title generation response is not valid JSON: " + str(exc)
+            ) from exc
 
-            # Get the result
-            res = chat_completion.choices[0].message.content
+        if not isinstance(payload, dict):
+            raise ValueError(
+                "Title generation response must be a JSON object."
+            )
 
-            print("========================================")
-            print("Form GPT: \n" + res)
+        required_keys = {"title", "style", "description"}
+        payload_keys = set(payload.keys())
+        missing_keys = sorted(required_keys - payload_keys)
+        unexpected_keys = sorted(payload_keys - required_keys)
+        if missing_keys or unexpected_keys:
+            raise ValueError(
+                "Title generation response must contain exactly keys "
+                + "title, style, description; missing="
+                + str(missing_keys)
+                + " unexpected="
+                + str(unexpected_keys)
+            )
 
-            # Be sure that we've got a legit reply
-            title = re.search("Title: (.+?)\n", res).group(1)
-            # ChatGPT sometimes adds extra quotes, remove them
-            title = title.replace('"', '')
-            style = re.search("Style: (.*?)\n", res).group(1)
-            description = re.search("Description: (.*?)(\n|$)", res).group(1)
-        except Exception as e:
-            print("Got exception from ChatGPT: " + str(e))
-            return "", "", ""
+        title = payload["title"]
+        style = payload["style"]
+        description = payload["description"]
+        if not isinstance(title, str):
+            raise ValueError(
+                "Title generation field 'title' must be a string."
+            )
+        if not isinstance(style, str):
+            raise ValueError(
+                "Title generation field 'style' must be a string."
+            )
+        if not isinstance(description, str):
+            raise ValueError(
+                "Title generation field 'description' must be a string."
+            )
 
-        return title, style, description
+        title_value = title.strip()
+        if title_value == "":
+            raise ValueError(
+                "Title generation field 'title' must not be empty."
+            )
+
+        return title_value, style.strip(), description.strip()
 
 
     def generate_image(self, title, style, description, source_image = None):
@@ -346,8 +403,12 @@ class image_gen:
 
         # assemble the image prompt
         image_prompt = title + ". (" + style + "): " + description
-        print("========================================")
-        print ("Image prompt: " + image_prompt)
+        self.logger.info(
+            "image_prompt_built title=%r style=%r prompt_chars=%s",
+            title,
+            style,
+            len(image_prompt),
+        )
 
         # Try to generate an image. If we have a source image, switch to img2img pipeline.
         pipeline_name = "img2img" if source_image is not None else "text2img"
@@ -382,14 +443,3 @@ class image_gen:
                 ).images[0]
 
         return img
-
-
-if __name__ == "__main__":
-    # Basci test code
-    image_generator = image_gen(config)
-    #title, style, description = image_generator.generate_title("Lets talk about white cow and how it can affect the car production")
-    #print ("Image prompt: \n" + title + ". " + style + ". " + description)
-
-    #img = image_generator.generate_image("Aloha Skies", "Pop Art", "This vibrant pop art piece captures the excitement of flying a hexacopter in Hawaii. It celebrates friendship, adventure, and the spirit of Hawaiian culture while reminding us to respect the environment.")
-    img = image_generator.generate_image("Caricature", "Line Art", "Low-resolution monochrome caricature, make it look like the provided picture. Simplified line art, bold outlines. No color, no photorealism, no complex background, no fine textures", source_image="src.jpg")
-    img.save("tmp.png")

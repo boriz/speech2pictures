@@ -10,6 +10,7 @@
 - stay in the main thread
 - start developer/tester as separate `worker` agents
 - own plan and status
+- close completed worker agents once their results are integrated
 - review plans, process docs, merge strategy, agent docs
 
 ## Does Not Own

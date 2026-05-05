@@ -30,7 +30,8 @@ Use it inside a separate `worker` agent when PM delegates implementation.
 3. Preserve current behavior outside the target area.
 4. Update docs or `config_template.py` if inputs changed.
 5. Run the highest-value local checks you can.
-6. Report back with changed files, expected behavior, checks run,
+6. When requested, run `agent-skill-linter` and include findings.
+7. Report back with changed files, expected behavior, checks run,
    limits, and regression risks.
 
 ## Repo Rules

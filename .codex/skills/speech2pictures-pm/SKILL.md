@@ -31,8 +31,12 @@ Use this skill when the task is project coordination for this repo.
 4. Stay in the main thread.
 5. Hand implementation to Developer in a separate `worker`.
 6. Hand validation to Tester in a separate `worker`.
-7. Use skills to guide those workers, not to replace worker isolation.
-8. Summarize outcome, evidence, and residual risk.
+7. Treat this delegation order as required for non-trivial code tasks.
+8. Only skip delegation for tiny docs/text changes or if the user explicitly
+   requests single-agent execution.
+9. Use skills to guide those workers, not to replace worker isolation.
+10. Close completed worker agents immediately after integrating their results.
+11. Summarize outcome, evidence, and residual risk.
 
 ## Repo Rules
 
