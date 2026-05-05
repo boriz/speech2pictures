@@ -8,11 +8,9 @@ import unittest
 from urllib.error import URLError
 from urllib.request import urlopen
 
-
-RUN_BROWSER_TEST = (
-    os.getenv("SPEECH2PICTURES_RUN_BROWSER_TEST", "").strip().lower()
-    in {"1", "true", "yes"}
-)
+RUN_BROWSER_TEST = os.getenv(
+    "SPEECH2PICTURES_RUN_BROWSER_TEST", ""
+).strip().lower() in {"1", "true", "yes"}
 
 # Desktop target: FHD
 DESKTOP_VIEWPORT = {"width": 1920, "height": 1080}
@@ -35,9 +33,7 @@ def _wait_for_server(url, server, timeout=20):
             output = ""
             if server.stdout is not None:
                 output = server.stdout.read()
-            raise RuntimeError(
-                "Test server exited before becoming ready.\n" + output
-            )
+            raise RuntimeError("Test server exited before becoming ready.\n" + output)
         try:
             with urlopen(url, timeout=1) as response:
                 if response.status < 500:
@@ -48,12 +44,7 @@ def _wait_for_server(url, server, timeout=20):
     output = ""
     if server.stdout is not None:
         output = server.stdout.read()
-    raise RuntimeError(
-        "Timed out waiting for test server at "
-        + url
-        + "\n"
-        + output
-    )
+    raise RuntimeError("Timed out waiting for test server at " + url + "\n" + output)
 
 
 class BrowserE2eTests(unittest.TestCase):

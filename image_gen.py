@@ -1,13 +1,11 @@
 import gc
 import json
 import logging
-from contextlib import nullcontext
 import warnings
+from contextlib import nullcontext
 
 import openai
-
 import torch
-
 from PIL import Image
 
 # accelerate imports pkg_resources internally on this pinned stack.
@@ -26,7 +24,6 @@ from diffusers import (
 
 
 class image_gen:
-
     def __init__(self, config):
         self.logger = logging.getLogger(__name__)
         # Keep local variables
@@ -132,7 +129,6 @@ class image_gen:
         self.pipe = None
         self.img2img_pipe = None
 
-
     def _configure_pipeline(self, pipe):
         if self.image_enable_vae_slicing:
             pipe.enable_vae_slicing()
@@ -150,7 +146,6 @@ class image_gen:
                 str(exc),
             )
 
-
     def _build_pipeline(self, pipeline_class):
         pipe = pipeline_class.from_pretrained(
             self.image_model,
@@ -159,13 +154,10 @@ class image_gen:
             use_safetensors=True,
             add_watermarker=False,
         )
-        pipe.scheduler = DPMSolverMultistepScheduler.from_config(
-            pipe.scheduler.config
-        )
+        pipe.scheduler = DPMSolverMultistepScheduler.from_config(pipe.scheduler.config)
         self._disable_watermark(pipe)
         self._configure_pipeline(pipe)
         return pipe
-
 
     def _build_img2img_pipeline(self):
         if self.img2img_pipe is not None:
@@ -181,11 +173,9 @@ class image_gen:
         self._configure_pipeline(self.img2img_pipe)
         return self.img2img_pipe
 
-
     def _disable_watermark(self, pipe):
         if hasattr(pipe, "watermark"):
             pipe.watermark = None
-
 
     def _maybe_compile_unet(self, pipe):
         if not self.image_enable_torch_compile or self.image_enable_low_vram:
@@ -211,7 +201,6 @@ class image_gen:
                 str(exc),
             )
 
-
     def _maybe_enable_unet_channels_last(self, pipe):
         if not self.image_enable_channels_last or self.image_enable_low_vram:
             return
@@ -229,14 +218,12 @@ class image_gen:
                 str(exc),
             )
 
-
     def _pipe_for_name(self, pipeline_name):
         if pipeline_name == "text2img":
             return self.pipe
         if pipeline_name == "img2img":
             return self.img2img_pipe
         raise ValueError("Unknown pipeline name: " + str(pipeline_name))
-
 
     def _release_pipeline(self, pipe):
         if pipe is None or self.image_enable_cpu_offload:
@@ -251,7 +238,6 @@ class image_gen:
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-
 
     def _activate_pipeline(self, pipeline_name):
         pipe = self._pipe_for_name(pipeline_name)
@@ -310,7 +296,6 @@ class image_gen:
         self._active_pipe_name = pipeline_name
         return pipe
 
-
     def _pipeline_kwargs(self):
         return {
             "width": self.image_width,
@@ -318,16 +303,17 @@ class image_gen:
             "num_inference_steps": self.image_num_inference_steps,
         }
 
-
     def generate_title(self, transcript):
         # The prompt is configured to return strict JSON; parsing below
         # intentionally fails hard for malformed responses.
         chat_completion = openai.ChatCompletion.create(
             model=self.gpt_model,
-            messages=[{
-                "role": "user",
-                "content": self.gpt_prompt + transcript,
-            }],
+            messages=[
+                {
+                    "role": "user",
+                    "content": self.gpt_prompt + transcript,
+                }
+            ],
         )
 
         # Get the result
@@ -351,9 +337,7 @@ class image_gen:
             ) from exc
 
         if not isinstance(payload, dict):
-            raise ValueError(
-                "Title generation response must be a JSON object."
-            )
+            raise ValueError("Title generation response must be a JSON object.")
 
         required_keys = {"title", "style", "description"}
         payload_keys = set(payload.keys())
@@ -372,28 +356,19 @@ class image_gen:
         style = payload["style"]
         description = payload["description"]
         if not isinstance(title, str):
-            raise ValueError(
-                "Title generation field 'title' must be a string."
-            )
+            raise ValueError("Title generation field 'title' must be a string.")
         if not isinstance(style, str):
-            raise ValueError(
-                "Title generation field 'style' must be a string."
-            )
+            raise ValueError("Title generation field 'style' must be a string.")
         if not isinstance(description, str):
-            raise ValueError(
-                "Title generation field 'description' must be a string."
-            )
+            raise ValueError("Title generation field 'description' must be a string.")
 
         title_value = title.strip()
         if title_value == "":
-            raise ValueError(
-                "Title generation field 'title' must not be empty."
-            )
+            raise ValueError("Title generation field 'title' must not be empty.")
 
         return title_value, style.strip(), description.strip()
 
-
-    def generate_image(self, title, style, description, source_image = None):
+    def generate_image(self, title, style, description, source_image=None):
         if self.device != "cuda":
             raise RuntimeError(
                 "CUDA is not available. Image generation requires local "

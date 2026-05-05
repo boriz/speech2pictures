@@ -63,6 +63,30 @@ source ./activate_venv.sh
 python3 -m unittest
 ```
 
+## Linting
+
+Python (Ruff):
+
+```bash
+./tools/run_python_lint.sh
+./tools/run_python_lint.sh --fix
+```
+
+JavaScript in templates (ESLint + Prettier):
+
+```bash
+npm install --no-package-lock
+./tools/run_js_lint.sh
+./tools/run_js_lint.sh --fix
+npm run format:js:check
+```
+
+Optional local gate commands before commit:
+
+```bash
+./tools/run_python_lint.sh && ./tools/run_js_lint.sh && source ./activate_venv.sh && python3 -m unittest tests.test_history_browse
+```
+
 ## Configuration
 
 Configuration variable details are documented inline in

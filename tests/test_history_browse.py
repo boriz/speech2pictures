@@ -145,11 +145,11 @@ class HistoryBrowseUiTests(unittest.TestCase):
 
         response = self.client.get(f"/history/{first_id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"const selectedImageId = {first_id};".encode("utf-8"), response.data)
+        self.assertIn(f"const selectedImageId = {first_id};".encode(), response.data)
 
         response = self.client.get(f"/history/{second_id}")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f"const selectedImageId = {second_id};".encode("utf-8"), response.data)
+        self.assertIn(f"const selectedImageId = {second_id};".encode(), response.data)
 
     def test_browse_routes_do_not_instantiate_generator(self):
         guard = mock.Mock(side_effect=AssertionError("generator should not load"))
@@ -178,7 +178,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         response = self.client.get(f"/history/{image_id}")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn(f'data-image-id="{image_id}"'.encode("utf-8"), response.data)
+        self.assertIn(f'data-image-id="{image_id}"'.encode(), response.data)
         self.assertIn(b"saved transcript", response.data)
         self.assertIn(b"saved title", response.data)
         self.assertIn(b"saved style", response.data)
@@ -236,7 +236,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
             200,
         )
         self.assertIn(
-            f"const autoTranscriptTargetChars = {int(configured_chars)};".encode("utf-8"),
+            f"const autoTranscriptTargetChars = {int(configured_chars)};".encode(),
             response.data,
         )
         self.assertIn(
@@ -246,16 +246,16 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"recognition.continuous = false", response.data)
         self.assertIn(b"recognition.interimResults = true", response.data)
         self.assertIn(b'recognition.lang = "en-US"', response.data)
-        self.assertIn(b"recognition.addEventListener(\"start\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"audiostart\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"soundstart\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"soundend\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"speechstart\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"speechend\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"audioend\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"nomatch\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"error\"", response.data)
-        self.assertIn(b"recognition.addEventListener(\"result\"", response.data)
+        self.assertIn(b'recognition.addEventListener("start"', response.data)
+        self.assertIn(b'recognition.addEventListener("audiostart"', response.data)
+        self.assertIn(b'recognition.addEventListener("soundstart"', response.data)
+        self.assertIn(b'recognition.addEventListener("soundend"', response.data)
+        self.assertIn(b'recognition.addEventListener("speechstart"', response.data)
+        self.assertIn(b'recognition.addEventListener("speechend"', response.data)
+        self.assertIn(b'recognition.addEventListener("audioend"', response.data)
+        self.assertIn(b'recognition.addEventListener("nomatch"', response.data)
+        self.assertIn(b'recognition.addEventListener("error"', response.data)
+        self.assertIn(b'recognition.addEventListener("result"', response.data)
         self.assertIn(b"describeSpeechError(event)", response.data)
         self.assertIn(b"not-allowed", response.data)
         self.assertIn(b"service-not-allowed", response.data)
@@ -287,7 +287,9 @@ class HistoryBrowseUiTests(unittest.TestCase):
         )
         self.assertIn(b"appendTranscript(finalText)", response.data)
         self.assertIn(b"maybeGeneratePicture()", response.data)
-        self.assertIn(b"JSON.stringify({transcript: transcriptSnapshot})", response.data)
+        self.assertIn(
+            b"JSON.stringify({transcript: transcriptSnapshot})", response.data
+        )
         self.assertIn(b"renderGeneratedPicture(payload.picture)", response.data)
         self.assertIn(b"renderGeneratingFrame()", response.data)
         self.assertIn(b"restorePreviousFrame()", response.data)
@@ -384,7 +386,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"latest transcript", response.data)
         self.assertIn(b"[", response.data)
         self.assertNotIn(
-            f'href="/history?ID={latest_id}"'.encode("utf-8"),
+            f'href="/history?ID={latest_id}"'.encode(),
             response.data,
         )
         self.assertNotIn(("ID=" + str(latest_id)).encode("utf-8"), response.data)
@@ -418,9 +420,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn("timestamp", picture)
         self.assertNotEqual(picture["image"], "")
 
-        generator.generate_title.assert_called_once_with(
-            "buffered conversation text"
-        )
+        generator.generate_title.assert_called_once_with("buffered conversation text")
         generator.generate_image.assert_called_once_with(
             "generated title",
             "generated style",
@@ -550,7 +550,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"[", response.data)
         self.assertIn(b"data:image/jpeg;base64", response.data)
         self.assertIn(
-            f'data-image-id="{image_id}"'.encode("utf-8"),
+            f'data-image-id="{image_id}"'.encode(),
             response.data,
         )
         self.assertNotIn(b"history-thumbnail-selected", response.data)
@@ -570,7 +570,10 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"second style", response.data)
         self.assertIn(b"second description", response.data)
         self.assertNotIn(b"second transcript", response.data)
-        self.assertIn(b'id="modalTranscriptDetails" class="metadata-popover hidden"', response.data)
+        self.assertIn(
+            b'id="modalTranscriptDetails" class="metadata-popover hidden"',
+            response.data,
+        )
 
     def test_mobile_history_only_loads_latest_fifty_records(self):
         for index in range(80):

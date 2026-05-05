@@ -163,3 +163,5 @@ cython_debug/
 /image_database.sqlite
 /*.png
 /tests/artifacts
+node_modules/
+.lint-tmp/

@@ -1,9 +1,10 @@
-import sqlite3
-import os
 import io
 import logging
+import os
+import sqlite3
 
 from PIL import Image
+
 from config import config
 
 HISTORY_RECENT_LIMIT_DEFAULT = 50
@@ -30,18 +31,18 @@ class database:
                 LOGGER.info("database_open file=%s", self.db_file_name)
             conn.execute(sql)
 
-
     def add_picture(self, transcript, title, style, description, img):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
             sql = "INSERT INTO tblImages (Transcript, Title, Style, Description, Image) VALUES(?, ?, ?, ?, ?);"
             with io.BytesIO() as img_bytes:
-                img.save(img_bytes, format='JPEG')
+                img.save(img_bytes, format="JPEG")
                 img_bytes = img_bytes.getvalue()
-            cursor.execute(sql, [transcript, title, style, description, sqlite3.Binary(img_bytes)])
+            cursor.execute(
+                sql, [transcript, title, style, description, sqlite3.Binary(img_bytes)]
+            )
             conn.commit()
             return cursor.lastrowid
-
 
     def _decode_image(self, image_bytes, context):
         try:
@@ -56,12 +57,11 @@ class database:
             )
             return None
 
-
     def get_picture(self, image_id):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
             sql = "SELECT Transcript, Title, Style, Description, Image FROM tblImages WHERE ID = :id;"
-            param = {'id': image_id}
+            param = {"id": image_id}
             cursor.execute(sql, param)
             row = cursor.fetchone()
 
@@ -77,12 +77,11 @@ class database:
             return None
         return transcript, title, style, description, image
 
-
     def get_picture_with_timestamp(self, image_id):
         with sqlite3.connect(self.db_file_name) as conn:
             cursor = conn.cursor()
             sql = "SELECT Transcript, Title, Style, Description, Image, Timestamp FROM tblImages WHERE ID = :id;"
-            param = {'id': image_id}
+            param = {"id": image_id}
             cursor.execute(sql, param)
             row = cursor.fetchone()
 
@@ -97,7 +96,6 @@ class database:
         if image is None:
             return None
         return transcript, title, style, description, image, timestamp
-
 
     def _resolve_recent_limit(self, limit):
         configured_limit = limit
@@ -117,7 +115,6 @@ class database:
 
         return parsed_limit
 
-
     def get_recent_pictures(self, limit=None):
         resolved_limit = self._resolve_recent_limit(limit)
         with sqlite3.connect(self.db_file_name) as conn:
@@ -127,7 +124,15 @@ class database:
             rows = cursor.fetchall()
 
         pictures = []
-        for image_id, timestamp, title, style, description, transcript, image_bytes in rows:
+        for (
+            image_id,
+            timestamp,
+            title,
+            style,
+            description,
+            transcript,
+            image_bytes,
+        ) in rows:
             image = self._decode_image(
                 image_bytes,
                 "get_recent_pictures image_id=" + str(image_id),
@@ -146,7 +151,6 @@ class database:
                 )
             )
         return pictures
-
 
     def get_last_picture_id(self):
         with sqlite3.connect(self.db_file_name) as conn:

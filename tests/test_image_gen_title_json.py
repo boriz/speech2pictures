@@ -18,11 +18,7 @@ def make_test_config():
 
 def fake_chat_completion(content):
     return types.SimpleNamespace(
-        choices=[
-            types.SimpleNamespace(
-                message=types.SimpleNamespace(content=content)
-            )
-        ]
+        choices=[types.SimpleNamespace(message=types.SimpleNamespace(content=content))]
     )
 
 
@@ -38,20 +34,20 @@ class ImageGenTitleJsonTests(unittest.TestCase):
 
     def test_generate_title_accepts_exact_json_object(self):
         generator = self.make_generator()
-        payload = json.dumps({
-            "title": "Sunrise Street",
-            "style": "Impressionism",
-            "description": "Golden hour cityscape.",
-        })
+        payload = json.dumps(
+            {
+                "title": "Sunrise Street",
+                "style": "Impressionism",
+                "description": "Golden hour cityscape.",
+            }
+        )
 
         with patch.object(
             image_gen_module.openai.ChatCompletion,
             "create",
             return_value=fake_chat_completion(payload),
         ) as create_mock:
-            title, style, description = generator.generate_title(
-                "transcript text"
-            )
+            title, style, description = generator.generate_title("transcript text")
 
         create_mock.assert_called_once()
         self.assertEqual(title, "Sunrise Street")
@@ -71,10 +67,12 @@ class ImageGenTitleJsonTests(unittest.TestCase):
 
     def test_generate_title_rejects_missing_required_keys(self):
         generator = self.make_generator()
-        payload = json.dumps({
-            "title": "Only title",
-            "style": "No description",
-        })
+        payload = json.dumps(
+            {
+                "title": "Only title",
+                "style": "No description",
+            }
+        )
 
         with patch.object(
             image_gen_module.openai.ChatCompletion,
@@ -89,11 +87,13 @@ class ImageGenTitleJsonTests(unittest.TestCase):
 
     def test_generate_title_rejects_empty_title(self):
         generator = self.make_generator()
-        payload = json.dumps({
-            "title": "   ",
-            "style": "Watercolor",
-            "description": "A river scene.",
-        })
+        payload = json.dumps(
+            {
+                "title": "   ",
+                "style": "Watercolor",
+                "description": "A river scene.",
+            }
+        )
 
         with patch.object(
             image_gen_module.openai.ChatCompletion,

@@ -1,27 +1,26 @@
-import os
-import io
 import base64
+import io
 import logging
+import os
 import time
 import uuid
-from urllib.parse import urlsplit
 from logging.handlers import RotatingFileHandler
+from urllib.parse import urlsplit
 
 from flask import (
     Flask,
     g,
     jsonify,
+    redirect,
     render_template,
     request,
-    redirect,
-    url_for,
-    session,
     send_from_directory,
+    session,
+    url_for,
 )
 
 from config import config
 from database import database
-
 
 app = Flask(__name__)
 LOG_DIR_DEFAULT = "logs"
@@ -54,9 +53,7 @@ def configure_logging():
     """Configure console + rotating file logging once per process."""
     log_dir = getattr(config, "log_dir", LOG_DIR_DEFAULT)
     log_file_name = getattr(config, "log_file_name", LOG_FILE_NAME_DEFAULT)
-    log_level = _resolve_log_level(
-        getattr(config, "log_level", LOG_LEVEL_DEFAULT)
-    )
+    log_level = _resolve_log_level(getattr(config, "log_level", LOG_LEVEL_DEFAULT))
     max_bytes = _resolve_int_setting(
         getattr(config, "log_max_bytes", LOG_MAX_BYTES_DEFAULT),
         LOG_MAX_BYTES_DEFAULT,
@@ -69,9 +66,7 @@ def configure_logging():
 
     os.makedirs(log_dir, exist_ok=True)
 
-    formatter = logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s %(message)s"
-    )
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
@@ -90,8 +85,7 @@ def configure_logging():
     for handler in root_logger.handlers:
         if (
             isinstance(handler, RotatingFileHandler)
-            and os.path.abspath(getattr(handler, "baseFilename", ""))
-            == log_file_path
+            and os.path.abspath(getattr(handler, "baseFilename", "")) == log_file_path
         ):
             handler.setLevel(log_level)
             handler.setFormatter(formatter)
@@ -240,7 +234,7 @@ def render_manual_page(
     latest_image=None,
 ):
     return render_template(
-        'manual.html',
+        "manual.html",
         ID=image_id,
         Image=image,
         FullDescription=full_description,
@@ -277,7 +271,7 @@ def render_auto_page(message="Ready to record audio."):
             }
 
     return render_template(
-        'auto.html',
+        "auto.html",
         Message=message,
         LatestImage=latest_image,
         AutoTranscriptTargetChars=transcript_target_chars,
@@ -311,7 +305,7 @@ def render_history_page(selected_id=None, message=""):
                 break
 
     return render_template(
-        'history.html',
+        "history.html",
         Images=images,
         SelectedID=selected_id_in_results,
         Message=message,
@@ -345,7 +339,7 @@ def render_transcript_failure_page(
     return page_renderer(
         0,
         message="Could not generate a title from the transcript. "
-                "Please edit the fields and try again.",
+        "Please edit the fields and try again.",
         transcript=transcript,
         title=title,
         style=style,
@@ -364,8 +358,8 @@ def build_full_description(title, style, description):
 
 def encode_image(img):
     img_bytes = io.BytesIO()
-    img.save(img_bytes, format='JPEG')
-    return base64.b64encode(img_bytes.getvalue()).decode('utf-8')
+    img.save(img_bytes, format="JPEG")
+    return base64.b64encode(img_bytes.getvalue()).decode("utf-8")
 
 
 def build_auto_picture_payload(image_id):
@@ -414,7 +408,7 @@ def render_manual_success_page(image_id):
     )
 
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if is_session_authenticated():
         return redirect(url_for("auto"))
@@ -423,7 +417,7 @@ def login():
         request.values.get("next", request.args.get("next", "")),
     )
     message = ""
-    if request.method == 'POST':
+    if request.method == "POST":
         password = request.form.get("password", "")
         if password in get_auth_passwords():
             session["authenticated"] = True
@@ -437,19 +431,19 @@ def login():
     )
 
 
-@app.route('/logout', methods=['GET', 'POST'])
+@app.route("/logout", methods=["GET", "POST"])
 def logout():
     session.clear()
     return redirect(url_for("login"))
 
 
-@app.route('/')
-@app.route('/index.html')
+@app.route("/")
+@app.route("/index.html")
 def home():
     return redirect(url_for("auto"))
 
 
-@app.route('/auto')
+@app.route("/auto")
 def auto():
     app.logger.info(
         "auto_page_render request_id=%s log_file=%s",
@@ -459,7 +453,7 @@ def auto():
     return render_auto_page()
 
 
-@app.route('/auto/generate', methods=['POST'])
+@app.route("/auto/generate", methods=["POST"])
 def auto_generate():
     generate_started_at = time.perf_counter()
     payload = request.get_json(silent=True) or {}
@@ -476,9 +470,11 @@ def auto_generate():
             "auto_generate_invalid_input request_id=%s reason=empty_transcript",
             _safe_request_id(),
         )
-        return jsonify({
-            "message": "No transcript text was received.",
-        }), 400
+        return jsonify(
+            {
+                "message": "No transcript text was received.",
+            }
+        ), 400
 
     try:
         app.logger.info(
@@ -486,8 +482,8 @@ def auto_generate():
             _safe_request_id(),
             len(transcript_value),
         )
-        title, style, description = (
-            get_image_generator().generate_title(transcript_value)
+        title, style, description = get_image_generator().generate_title(
+            transcript_value
         )
     except Exception as exc:
         app.logger.exception(
@@ -496,10 +492,12 @@ def auto_generate():
             len(transcript_value),
             str(exc),
         )
-        return jsonify({
-            "message": "Could not generate a title from the transcript: "
-                       + str(exc),
-        }), 500
+        return jsonify(
+            {
+                "message": "Could not generate a title from the transcript: "
+                + str(exc),
+            }
+        ), 500
 
     title_value = title.strip()
     style_value = style.strip()
@@ -510,9 +508,11 @@ def auto_generate():
             _safe_request_id(),
             len(transcript_value),
         )
-        return jsonify({
-            "message": "Could not generate a title from the transcript.",
-        }), 500
+        return jsonify(
+            {
+                "message": "Could not generate a title from the transcript.",
+            }
+        ), 500
 
     try:
         app.logger.info(
@@ -540,9 +540,11 @@ def auto_generate():
             title_value,
             str(exc),
         )
-        return jsonify({
-            "message": "Image generation failed: " + str(exc),
-        }), 500
+        return jsonify(
+            {
+                "message": "Image generation failed: " + str(exc),
+            }
+        ), 500
 
     picture = build_auto_picture_payload(new_id)
     if picture is None:
@@ -551,9 +553,11 @@ def auto_generate():
             _safe_request_id(),
             new_id,
         )
-        return jsonify({
-            "message": "Generated image was saved, but could not be loaded.",
-        }), 500
+        return jsonify(
+            {
+                "message": "Generated image was saved, but could not be loaded.",
+            }
+        ), 500
 
     elapsed_ms = (time.perf_counter() - generate_started_at) * 1000.0
     app.logger.info(
@@ -562,19 +566,21 @@ def auto_generate():
         new_id,
         elapsed_ms,
     )
-    return jsonify({
-        "message": "Picture generated.",
-        "picture": picture,
-    })
+    return jsonify(
+        {
+            "message": "Picture generated.",
+            "picture": picture,
+        }
+    )
 
 
-@app.route('/manual')
+@app.route("/manual")
 def manual():
     app.logger.info("manual_page_render request_id=%s", _safe_request_id())
     return render_manual_page()
 
 
-@app.route('/client-log', methods=['POST'])
+@app.route("/client-log", methods=["POST"])
 def client_log():
     payload = request.get_json(silent=True) or {}
     event_name = str(payload.get("event") or "").strip()
@@ -586,9 +592,7 @@ def client_log():
     context = payload.get("context")
     user_agent = request.headers.get("User-Agent", "")
 
-    log_line = (
-        "client_event request_id=%s event=%s message=%r context=%r user_agent=%r"
-    )
+    log_line = "client_event request_id=%s event=%s message=%r context=%r user_agent=%r"
     if level == "error":
         app.logger.error(
             log_line,
@@ -620,12 +624,16 @@ def client_log():
     return jsonify({"logged": True})
 
 
-@app.route('/favicon.ico')
+@app.route("/favicon.ico")
 def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico',mimetype='image/vnd.microsoft.icon')
+    return send_from_directory(
+        os.path.join(app.root_path, "static"),
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
 
 
-@app.route('/history')
+@app.route("/history")
 def history_index():
     selected_id = request.args.get("ID", type=int)
     app.logger.info(
@@ -636,7 +644,7 @@ def history_index():
     return render_history_page(selected_id)
 
 
-@app.route('/history/<int:ID>', methods=['GET'])
+@app.route("/history/<int:ID>", methods=["GET"])
 def history(ID):
     app.logger.info(
         "history_view_image request_id=%s image_id=%s",
@@ -646,7 +654,7 @@ def history(ID):
     return render_history_page(selected_id=ID)
 
 
-@app.route('/manual/txt2img', methods=['POST'])
+@app.route("/manual/txt2img", methods=["POST"])
 def manual_txt2img():
     return handle_txt2img(
         render_manual_page,
@@ -655,10 +663,10 @@ def manual_txt2img():
 
 
 def handle_txt2img(failure_renderer, success_renderer=None):
-    transcript = request.form.get('Transcript', '')
-    title = request.form.get('Title', '')
-    style = request.form.get('Style', '')
-    description = request.form.get('Description', '')
+    transcript = request.form.get("Transcript", "")
+    title = request.form.get("Title", "")
+    style = request.form.get("Style", "")
+    description = request.form.get("Description", "")
 
     transcript_value = transcript.strip()
     title_value = title.strip()
@@ -762,12 +770,12 @@ def handle_txt2img(failure_renderer, success_renderer=None):
     if success_renderer is not None:
         return success_renderer(new_id)
 
-    return redirect(url_for("history", ID = new_id))
+    return redirect(url_for("history", ID=new_id))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.logger.info(
         "app_startup mode=direct log_file=%s",
         APP_LOG_FILE_PATH,
     )
-    app.run(debug = True)
+    app.run(debug=True)

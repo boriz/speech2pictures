@@ -97,22 +97,27 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
         source_image_path = os.path.join(temp_dir.name, "source.png")
         Image.new("RGB", (8, 8), color="white").save(source_image_path)
 
-        with patch.object(
-            image_gen_module.StableDiffusionXLPipeline,
-            "from_pretrained",
-            side_effect=FakePipe.from_pretrained,
-        ) as base_loader, patch.object(
-            image_gen_module,
-            "StableDiffusionXLImg2ImgPipeline",
-            FakeImg2ImgPipe,
-        ), patch.object(
-            image_gen_module.DPMSolverMultistepScheduler,
-            "from_config",
-            return_value=FakeScheduler(),
-        ), patch.object(
-            image_gen_module.torch.cuda,
-            "is_available",
-            return_value=True,
+        with (
+            patch.object(
+                image_gen_module.StableDiffusionXLPipeline,
+                "from_pretrained",
+                side_effect=FakePipe.from_pretrained,
+            ) as base_loader,
+            patch.object(
+                image_gen_module,
+                "StableDiffusionXLImg2ImgPipeline",
+                FakeImg2ImgPipe,
+            ),
+            patch.object(
+                image_gen_module.DPMSolverMultistepScheduler,
+                "from_config",
+                return_value=FakeScheduler(),
+            ),
+            patch.object(
+                image_gen_module.torch.cuda,
+                "is_available",
+                return_value=True,
+            ),
         ):
             generator = image_gen_module.image_gen(config)
 
@@ -145,41 +150,50 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
 
     def test_torch_compile_applies_only_to_text2img(self):
         config = make_test_config()
-        with patch.object(
-            image_gen_module.StableDiffusionXLPipeline,
-            "from_pretrained",
-            side_effect=FakePipe.from_pretrained,
-        ), patch.object(
-            image_gen_module,
-            "StableDiffusionXLImg2ImgPipeline",
-            FakeImg2ImgPipe,
-        ), patch.object(
-            image_gen_module.DPMSolverMultistepScheduler,
-            "from_config",
-            return_value=FakeScheduler(),
-        ), patch.object(
-            image_gen_module.torch,
-            "compile",
-            side_effect=lambda unet, **kwargs: f"compiled:{unet}",
-        ) as compile_mock, patch.object(
-            image_gen_module.torch.cuda,
-            "is_available",
-            return_value=True,
-        ), patch.object(
-            config,
-            "image_enable_torch_compile",
-            True,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_low_vram",
-            False,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_channels_last",
-            True,
-            create=True,
+        with (
+            patch.object(
+                image_gen_module.StableDiffusionXLPipeline,
+                "from_pretrained",
+                side_effect=FakePipe.from_pretrained,
+            ),
+            patch.object(
+                image_gen_module,
+                "StableDiffusionXLImg2ImgPipeline",
+                FakeImg2ImgPipe,
+            ),
+            patch.object(
+                image_gen_module.DPMSolverMultistepScheduler,
+                "from_config",
+                return_value=FakeScheduler(),
+            ),
+            patch.object(
+                image_gen_module.torch,
+                "compile",
+                side_effect=lambda unet, **kwargs: f"compiled:{unet}",
+            ) as compile_mock,
+            patch.object(
+                image_gen_module.torch.cuda,
+                "is_available",
+                return_value=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_torch_compile",
+                True,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_low_vram",
+                False,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_channels_last",
+                True,
+                create=True,
+            ),
         ):
             generator = image_gen_module.image_gen(config)
 
@@ -212,37 +226,45 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
 
     def test_channels_last_applies_to_unet_on_cuda(self):
         config = make_test_config()
-        with patch.object(
-            image_gen_module.StableDiffusionXLPipeline,
-            "from_pretrained",
-            side_effect=FakePipe.from_pretrained,
-        ), patch.object(
-            image_gen_module,
-            "StableDiffusionXLImg2ImgPipeline",
-            FakeImg2ImgPipe,
-        ), patch.object(
-            image_gen_module.DPMSolverMultistepScheduler,
-            "from_config",
-            return_value=FakeScheduler(),
-        ), patch.object(
-            image_gen_module.torch.cuda,
-            "is_available",
-            return_value=True,
-        ), patch.object(
-            config,
-            "image_enable_torch_compile",
-            False,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_low_vram",
-            False,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_channels_last",
-            True,
-            create=True,
+        with (
+            patch.object(
+                image_gen_module.StableDiffusionXLPipeline,
+                "from_pretrained",
+                side_effect=FakePipe.from_pretrained,
+            ),
+            patch.object(
+                image_gen_module,
+                "StableDiffusionXLImg2ImgPipeline",
+                FakeImg2ImgPipe,
+            ),
+            patch.object(
+                image_gen_module.DPMSolverMultistepScheduler,
+                "from_config",
+                return_value=FakeScheduler(),
+            ),
+            patch.object(
+                image_gen_module.torch.cuda,
+                "is_available",
+                return_value=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_torch_compile",
+                False,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_low_vram",
+                False,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_channels_last",
+                True,
+                create=True,
+            ),
         ):
             generator = image_gen_module.image_gen(config)
 
@@ -259,46 +281,56 @@ class ImageGenLazyLoadingTests(unittest.TestCase):
 
     def test_low_vram_mode_uses_attention_slicing_and_offload(self):
         config = make_test_config()
-        with patch.object(
-            image_gen_module.StableDiffusionXLPipeline,
-            "from_pretrained",
-            side_effect=FakePipe.from_pretrained,
-        ), patch.object(
-            image_gen_module,
-            "StableDiffusionXLImg2ImgPipeline",
-            FakeImg2ImgPipe,
-        ), patch.object(
-            image_gen_module.DPMSolverMultistepScheduler,
-            "from_config",
-            return_value=FakeScheduler(),
-        ), patch.object(
-            image_gen_module.torch,
-            "compile",
-            side_effect=lambda unet, **kwargs: f"compiled:{unet}",
-        ) as compile_mock, patch.object(
-            image_gen_module.torch.cuda,
-            "is_available",
-            return_value=True,
-        ), patch.object(
-            config,
-            "image_enable_low_vram",
-            True,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_torch_compile",
-            True,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_channels_last",
-            True,
-            create=True,
-        ), patch.object(
-            config,
-            "image_enable_xformers",
-            True,
-            create=True,
+        with (
+            patch.object(
+                image_gen_module.StableDiffusionXLPipeline,
+                "from_pretrained",
+                side_effect=FakePipe.from_pretrained,
+            ),
+            patch.object(
+                image_gen_module,
+                "StableDiffusionXLImg2ImgPipeline",
+                FakeImg2ImgPipe,
+            ),
+            patch.object(
+                image_gen_module.DPMSolverMultistepScheduler,
+                "from_config",
+                return_value=FakeScheduler(),
+            ),
+            patch.object(
+                image_gen_module.torch,
+                "compile",
+                side_effect=lambda unet, **kwargs: f"compiled:{unet}",
+            ) as compile_mock,
+            patch.object(
+                image_gen_module.torch.cuda,
+                "is_available",
+                return_value=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_low_vram",
+                True,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_torch_compile",
+                True,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_channels_last",
+                True,
+                create=True,
+            ),
+            patch.object(
+                config,
+                "image_enable_xformers",
+                True,
+                create=True,
+            ),
         ):
             generator = image_gen_module.image_gen(config)
 

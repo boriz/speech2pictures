@@ -10,11 +10,11 @@ import torch
 from config import config as app_config
 from image_gen import image_gen
 
-
-RUN_TIMING_TEST = (
-    os.getenv("SPEECH2PICTURES_RUN_IMAGE_TIMING", "").strip().lower()
-    in {"1", "true", "yes"}
-)
+RUN_TIMING_TEST = os.getenv("SPEECH2PICTURES_RUN_IMAGE_TIMING", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 
 def _env_int(name, default):
@@ -35,9 +35,7 @@ def _env_bool(name, default):
     if normalized in {"0", "false", "no", "off"}:
         return False
 
-    raise ValueError(
-        f"Invalid boolean value for {name}: {value!r}"
-    )
+    raise ValueError(f"Invalid boolean value for {name}: {value!r}")
 
 
 class ImageGenerationTimingTests(unittest.TestCase):
@@ -211,17 +209,14 @@ class ImageGenerationTimingTests(unittest.TestCase):
             print(f"low_vram: {using_low_vram}")
             print(f"xformers: {using_xformers}")
             print(f"attention_slicing: {using_attention_slicing}")
-            print(
-                "sequential_cpu_offload:"
-                f" {using_sequential_cpu_offload}"
-            )
+            print(f"sequential_cpu_offload: {using_sequential_cpu_offload}")
             print(f"channels_last: {using_channels_last}")
             print(f"torch.compile: {using_torch_compile}")
             print(f"model_cpu_offload: {using_model_cpu_offload}")
             print(
                 "CUDA memory before generation:"
-                f" free={mem_free / (1024 ** 3):.2f} GiB"
-                f" total={mem_total / (1024 ** 3):.2f} GiB"
+                f" free={mem_free / (1024**3):.2f} GiB"
+                f" total={mem_total / (1024**3):.2f} GiB"
             )
             print(f"Model load time: {load_elapsed:.2f}s")
 
@@ -233,8 +228,8 @@ class ImageGenerationTimingTests(unittest.TestCase):
                     image = generator.generate_image(title, style, description)
                 except Exception as exc:
                     gen_elapsed = time.perf_counter() - gen_started
-                    allocated = torch.cuda.memory_allocated() / (1024 ** 3)
-                    reserved = torch.cuda.memory_reserved() / (1024 ** 3)
+                    allocated = torch.cuda.memory_allocated() / (1024**3)
+                    reserved = torch.cuda.memory_reserved() / (1024**3)
                     self.fail(
                         "Image generation failed on iteration "
                         f"{iteration + 1}/{repeat} after {gen_elapsed:.2f}s "
@@ -245,14 +240,11 @@ class ImageGenerationTimingTests(unittest.TestCase):
 
                 gen_elapsed = time.perf_counter() - gen_started
                 gen_times.append(gen_elapsed)
-                print(
-                    f"Generation {iteration + 1}/{repeat}: "
-                    f"{gen_elapsed:.2f}s"
-                )
+                print(f"Generation {iteration + 1}/{repeat}: {gen_elapsed:.2f}s")
 
             total_elapsed = load_elapsed + sum(gen_times)
-            allocated = torch.cuda.memory_allocated() / (1024 ** 3)
-            reserved = torch.cuda.memory_reserved() / (1024 ** 3)
+            allocated = torch.cuda.memory_allocated() / (1024**3)
+            reserved = torch.cuda.memory_reserved() / (1024**3)
 
             with tempfile.NamedTemporaryFile(
                 suffix=".png",
