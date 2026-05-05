@@ -42,8 +42,6 @@ Start with:
 
 - `python3 -m py_compile app.py image_gen.py database.py`
 - targeted Flask route or CLI smoke checks when deps exist
-- when requested, run the `agent-skill-linter` skill on the repo/skill
-  targets and report actionable findings
 
 Call out blockers: missing deps, GPU, mic, secrets.
 
@@ -73,8 +71,6 @@ Call out blockers: missing deps, GPU, mic, secrets.
 - After PM integrates a worker result, PM closes that completed worker agent
   before finalizing the next hand-off or user-facing summary.
 - Developer and tester follow PM hand-offs unless the user overrides.
-- Developer and tester must use `agent-skill-linter` when the task
-  includes skill/agent protocol files or explicitly asks for linting.
 - Review-only ownership:
   - PM: plans, process docs, branch/merge strategy, agent docs
   - Developer: code review, implementation risk

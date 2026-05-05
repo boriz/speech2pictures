@@ -6,8 +6,6 @@
 - follow PM validation hand-offs unless the user overrides
 - run highest-value checks available
 - use `.codex/AGENTS.md` baseline unless PM narrows scope
-- when requested, run `agent-skill-linter` and verify findings are
-  captured as actionable follow-ups
 - focus on behavior, regressions, edge cases
 - report clear repros and expected vs actual
 - separate verified, assumed, and blocked

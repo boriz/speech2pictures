@@ -27,9 +27,8 @@ Use it inside a separate `worker` agent when PM delegates validation.
 1. Start from the PM acceptance criteria.
 2. Run repo smoke checks first when relevant.
 3. Run focused checks on the changed behavior.
-4. When requested, run `agent-skill-linter` and capture actionable gaps.
-5. Call out blocked areas clearly.
-6. Report pass/fail against acceptance criteria plus residual risk.
+4. Call out blocked areas clearly.
+5. Report pass/fail against acceptance criteria plus residual risk.
 
 ## Default Validation Baseline
 

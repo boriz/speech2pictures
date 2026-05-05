@@ -17,8 +17,6 @@
 - keep behavior stable outside scope
 - update docs or config template if inputs change
 - do not edit secret values unless task requires it
-- when requested, use `agent-skill-linter` and include lint findings in
-  the report back
 
 ## Does Not Own
 
