@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Speech2Pictures - Auto</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="{{ url_for('static', filename='app_shell.css') }}" rel="stylesheet">
+<style>
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+.volume-bar {
+  transform: scaleY(0);
+  opacity: 0.25;
+  transition: transform 80ms linear, opacity 80ms linear;
+}
+.metadata-popover {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.metadata-frame-overlay {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(22rem, calc(100% - 1rem));
+  max-width: calc(100% - 1rem);
+  max-height: min(18rem, 55%);
+  overflow: auto;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body class="app-shell-body bg-[#101415] text-slate-100 h-dvh overflow-hidden">
+<header class="app-shell-topbar">
+<details class="relative">
+<summary class="text-violet-500 hover:text-violet-300 transition-colors active:scale-95 duration-200 cursor-pointer">
+<span class="material-symbols-outlined">menu</span>
+</summary>
+<div class="absolute left-0 top-10 w-44 rounded-lg border border-white/10 bg-slate-950 shadow-xl shadow-black/40 overflow-hidden font-['Manrope'] text-sm">
+<a class="block px-4 py-3 text-violet-300 bg-violet-500/10" href="{{ url_for('auto') }}">Auto</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('manual') }}">Manual</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('history_index') }}">History</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800 border-t border-white/10" href="{{ url_for('logout') }}">Logout</a>
+</div>
+</details>
+<div class="app-shell-topbar-title">Auto</div>
+<a class="app-shell-topbar-action" href="{{ url_for('logout') }}" aria-label="Logout">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+</a>
+</header>
+<main class="app-shell-main app-shell-main-fixed left-1/2 top-14 bottom-[72px] md:bottom-[76px] -translate-x-1/2 w-full max-w-2xl grid grid-rows-[minmax(0,1.2fr)_auto_auto_minmax(6.75rem,0.4fr)] md:grid-rows-[minmax(0,1.45fr)_auto_auto_minmax(8.5rem,0.5fr)] overflow-hidden">
+<section class="shared-picture-section shared-picture-section-fixed min-h-0">
+{% set frame_id = "pictureFrame" %}
+{% set image_data = LatestImage.image if LatestImage else None %}
+{% set image_alt = "Latest generated image" %}
+{% set empty_icon = "mic" %}
+{% set empty_text = "No picture yet. Ready to record audio." %}
+{% set empty_icon_id = "frameIcon" %}
+{% set empty_text_id = "frameText" %}
+{% include "partials/picture_frame.html" %}
+</section>
+<section class="app-shell-card rounded-xl border border-slate-700 bg-slate-900 min-h-[3.25rem]" id="imageMetadataBlock">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300" id="imageMetadataRow">
+{% if LatestImage.title or LatestImage.style %}
+<span class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50">
+{% if LatestImage.title %}{{ LatestImage.title }}{% endif %}{% if LatestImage.style %} ({{ LatestImage.style }}){% endif %}
+</span>
+{% endif %}
+{% if LatestImage.description %}
+<details class="metadata-popover" data-popover-text="{{ LatestImage.description|e }}">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">info</span>
+Description
+</summary>
+</details>
+{% endif %}
+{% if LatestImage.transcript %}
+<details class="metadata-popover" data-popover-text="{{ LatestImage.transcript|e }}">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">notes</span>
+Transcript
+</summary>
+</details>
+{% endif %}
+{% if LatestImage.timestamp %}
+<span class="text-slate-400">[{{ LatestImage.timestamp }}]</span>
+{% endif %}
+</div>
+</section>
+<section class="app-shell-card rounded-xl border border-slate-700 bg-slate-900/60">
+<div class="grid grid-cols-[1fr_auto_auto] items-center gap-2">
+<div class="min-w-0 font-['Manrope'] text-sm text-slate-300 truncate" id="statusText">Idle</div>
+<div class="flex h-7 items-end gap-1 text-violet-400" id="volumeMeter" aria-label="Microphone activity indicator">
+<span class="volume-bar block h-5 w-1.5 origin-bottom rounded-full bg-violet-400"></span>
+<span class="volume-bar block h-4 w-1.5 origin-bottom rounded-full bg-violet-300"></span>
+<span class="volume-bar block h-6 w-1.5 origin-bottom rounded-full bg-violet-400"></span>
+<span class="volume-bar block h-5 w-1.5 origin-bottom rounded-full bg-violet-300"></span>
+</div>
+<button class="h-11 w-11 rounded-lg bg-violet-600 text-white flex items-center justify-center active:scale-[0.98] disabled:opacity-50" id="micToggleButton" type="button" aria-label="Start recording">
+<span class="material-symbols-outlined" id="micToggleIcon">mic</span>
+</button>
+</div>
+</section>
+<section class="app-shell-card h-full min-h-0 rounded-xl border border-slate-700 bg-slate-900/60 space-y-1.5 flex flex-col">
+<div class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50" id="transcriptHeading">Transcript: empty</div>
+<div class="scrollable-content min-h-0 flex-1 overflow-auto rounded-lg border border-slate-700 bg-slate-950/60 p-2 font-['Manrope'] text-sm font-normal text-slate-300 whitespace-pre-wrap" id="transcriptText">No transcript yet.</div>
+</section>
+</main>
+<nav class="app-shell-nav fixed bottom-0 left-1/2 w-full max-w-2xl -translate-x-1/2 z-50 flex justify-around items-center bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
+<a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-4 py-1 active:scale-90 duration-150" href="{{ url_for('auto') }}">
+<span class="material-symbols-outlined mb-1">bolt</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">Auto</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('manual') }}">
+<span class="material-symbols-outlined mb-1">photo_library</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">Manual</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('history_index') }}">
+<span class="material-symbols-outlined mb-1">history</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">History</span>
+</a>
+</nav>
+<script>
+const micToggleButton = document.getElementById("micToggleButton");
+const micToggleIcon = document.getElementById("micToggleIcon");
+const statusText = document.getElementById("statusText");
+const transcriptHeading = document.getElementById("transcriptHeading");
+const transcriptText = document.getElementById("transcriptText");
+const pictureFrame = document.getElementById("pictureFrame");
+const imageMetadataRow = document.getElementById("imageMetadataRow");
+const frameText = document.getElementById("frameText");
+const frameIcon = document.getElementById("frameIcon");
+const volumeMeter = document.getElementById("volumeMeter");
+const volumeBars = Array.from(volumeMeter.querySelectorAll(".volume-bar"));
+const autoTranscriptMinWords = Math.max(1, {{ AutoTranscriptMinWords|int }});
+const autoSilenceDiscardSeconds = Math.max(0, {{ AutoSilenceDiscardSeconds|int }});
+const autoSilenceGenerateSeconds = Math.max(0, {{ AutoSilenceGenerateSeconds|int }});
+const autoTranscriptMaxChars = Math.max(1, {{ AutoTranscriptMaxChars|int }});
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const clientLogEndpoint = "{{ url_for('client_log') }}";
+const clientSessionId = (
+  window.crypto && typeof window.crypto.randomUUID === "function"
+    ? window.crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(16).slice(2)}`
+);
+const transcriptHeadingStates = {
+  empty: "Transcript: empty",
+  ready: "Transcript: ready for new image",
+  maxLength: "Transcript: max length reached",
+  discardedShort: "Transcript: discarded short transcript",
+};
+
+let recognition = null;
+let recognitionActive = false;
+let transcriptBuffer = "";
+let interimTranscript = "";
+let stoppedByUser = false;
+let isGeneratingPicture = false;
+let generateAfterRecognitionEnd = false;
+let lastSpeechEndedAt = null;
+let silenceCheckTimer = null;
+let transcriptHeadingOverride = "";
+let pendingTranscriptQueue = [];
+let previousFrameMarkup = pictureFrame ? pictureFrame.innerHTML : "";
+let statusResetTimer = null;
+
+function setNavigationLocked(isLocked) {
+  document
+    .querySelectorAll(".app-shell-topbar a, .app-shell-nav a")
+    .forEach((link) => {
+      if (isLocked) {
+        if (!link.dataset.originalTabIndex) {
+          link.dataset.originalTabIndex = link.getAttribute("tabindex") || "";
+        }
+        link.setAttribute("aria-disabled", "true");
+        link.setAttribute("tabindex", "-1");
+      } else {
+        link.removeAttribute("aria-disabled");
+        if (link.dataset.originalTabIndex) {
+          link.setAttribute("tabindex", link.dataset.originalTabIndex);
+        } else {
+          link.removeAttribute("tabindex");
+        }
+        delete link.dataset.originalTabIndex;
+      }
+      link.classList.toggle("pointer-events-none", isLocked);
+      link.classList.toggle("opacity-40", isLocked);
+    });
+}
+
+function sendClientLog(eventName, level = "info", message = "", context = {}) {
+  const payload = {
+    event: eventName,
+    level,
+    message,
+    context: {
+      ...context,
+      sessionId: clientSessionId,
+    },
+  };
+  const body = JSON.stringify(payload);
+  if (navigator.sendBeacon) {
+    const blob = new Blob([body], {type: "application/json"});
+    if (navigator.sendBeacon(clientLogEndpoint, blob)) {
+      return;
+    }
+  }
+  fetch(clientLogEndpoint, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function countTranscriptWords(text) {
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    return 0;
+  }
+  return cleanText.split(/\s+/).filter(Boolean).length;
+}
+
+function updateTranscriptHeading(state = "") {
+  if (state) {
+    transcriptHeadingOverride = state;
+  }
+  if (transcriptHeadingOverride) {
+    transcriptHeading.textContent = transcriptHeadingOverride;
+    return;
+  }
+
+  const wordCount = countTranscriptWords(transcriptBuffer);
+  if (wordCount === 0) {
+    transcriptHeading.textContent = transcriptHeadingStates.empty;
+  } else {
+    transcriptHeading.textContent = `Transcript: ${wordCount} words (${autoTranscriptMinWords} min)`;
+  }
+}
+
+function clearTranscriptHeadingOverride() {
+  transcriptHeadingOverride = "";
+  updateTranscriptHeading();
+}
+
+function describeSpeechError(event) {
+  const error = event.error || "unknown";
+  const message = event.message ? ` ${event.message}` : "";
+  const descriptions = {
+    "aborted": "Speech recognition was aborted.",
+    "audio-capture": "Chrome could not capture audio for speech recognition.",
+    "language-not-supported": "Chrome does not support this recognition language.",
+    "network": "Chrome speech recognition could not reach its recognition service.",
+    "no-speech": "Chrome did not detect speech.",
+    "not-allowed": "Chrome blocked speech recognition permission or policy.",
+    "phrases-not-supported": "Chrome does not support phrase biasing here.",
+    "service-not-allowed": "Chrome blocked or does not provide the speech recognition service.",
+  };
+  return `${error}. ${descriptions[error] || "Chrome did not provide a detailed reason."}${message}`;
+}
+
+function renderTranscriptText() {
+  const visibleTranscript = [transcriptBuffer, interimTranscript]
+    .filter((part) => part.trim() !== "")
+    .join(" ")
+    .trim();
+  transcriptText.textContent = visibleTranscript || "Listening for speech.";
+}
+
+function appendTranscript(text) {
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    updateTranscriptHeading();
+    return;
+  }
+  transcriptHeadingOverride = "";
+  transcriptBuffer = transcriptBuffer ? `${transcriptBuffer} ${cleanText}` : cleanText;
+  interimTranscript = "";
+  renderTranscriptText();
+  updateTranscriptHeading();
+  maybeGeneratePicture();
+}
+
+function setInterimTranscript(text) {
+  interimTranscript = (text || "").trim();
+  renderTranscriptText();
+}
+
+function setStatus(message, icon) {
+  statusText.textContent = message;
+  if (frameText) {
+    frameText.textContent = message;
+  }
+  if (frameIcon && icon) {
+    frameIcon.textContent = icon;
+  }
+}
+
+function clearSilenceCheck() {
+  if (silenceCheckTimer) {
+    window.clearTimeout(silenceCheckTimer);
+    silenceCheckTimer = null;
+  }
+}
+
+function getSilenceDecision() {
+  const transcriptSnapshot = transcriptBuffer.trim();
+  if (!transcriptSnapshot || lastSpeechEndedAt === null) {
+    return null;
+  }
+
+  const wordCount = countTranscriptWords(transcriptSnapshot);
+  const isShortTranscript = wordCount < autoTranscriptMinWords;
+  const delaySeconds = (
+    isShortTranscript ? autoSilenceDiscardSeconds : autoSilenceGenerateSeconds
+  );
+  const elapsedMs = Date.now() - lastSpeechEndedAt;
+  const remainingMs = Math.max(0, (delaySeconds * 1000) - elapsedMs);
+
+  return {
+    action: isShortTranscript ? "discard" : "generate",
+    remainingMs,
+    remainingSeconds: Math.ceil(remainingMs / 1000),
+  };
+}
+
+function updateSilenceCountdownStatus(decision) {
+  if (!decision || decision.remainingMs <= 0) {
+    return false;
+  }
+
+  if (decision.action === "discard") {
+    setStatus(
+      `Waiting for more speech - discarding in ${decision.remainingSeconds}s`,
+      "settings_voice",
+    );
+  } else {
+    setStatus(
+      `Speech paused - generating in ${decision.remainingSeconds}s`,
+      "settings_voice",
+    );
+  }
+  return true;
+}
+
+function setListeningStatus() {
+  const decision = getSilenceDecision();
+  if (updateSilenceCountdownStatus(decision)) {
+    return;
+  }
+  setStatus("Listening for speech...", "settings_voice");
+}
+
+function clearTranscriptBuffer(headingState = "") {
+  transcriptBuffer = "";
+  interimTranscript = "";
+  lastSpeechEndedAt = null;
+  clearSilenceCheck();
+  transcriptHeadingOverride = headingState;
+  renderTranscriptText();
+  updateTranscriptHeading();
+}
+
+function discardShortTranscript() {
+  clearTranscriptBuffer(transcriptHeadingStates.discardedShort);
+  setStatus("Discarded short transcript.", "settings_voice");
+  sendClientLog("auto_transcript_discarded_short", "info");
+}
+
+function scheduleSilenceCheck() {
+  clearSilenceCheck();
+  const decision = getSilenceDecision();
+  if (!decision) {
+    return;
+  }
+
+  if (decision.remainingMs <= 0) {
+    if (decision.action === "discard") {
+      discardShortTranscript();
+    } else {
+      generatePictureFromBuffer(transcriptHeadingStates.ready);
+    }
+    return;
+  }
+
+  updateSilenceCountdownStatus(decision);
+  silenceCheckTimer = window.setTimeout(
+    scheduleSilenceCheck,
+    Math.min(1000, decision.remainingMs),
+  );
+}
+
+function setTransientGenerationFailureStatus(message) {
+  if (statusResetTimer) {
+    window.clearTimeout(statusResetTimer);
+    statusResetTimer = null;
+  }
+  setStatus(message, "error");
+  statusResetTimer = window.setTimeout(() => {
+    if (recognitionActive) {
+      setListeningStatus();
+    } else {
+      setStatus("Recording stopped.", "mic");
+    }
+    statusResetTimer = null;
+  }, 4500);
+}
+
+function setMicButtonRecording(isRecording) {
+  micToggleButton.disabled = false;
+  micToggleButton.setAttribute(
+    "aria-label",
+    isRecording ? "Stop recording" : "Start recording",
+  );
+  micToggleIcon.textContent = isRecording ? "stop_circle" : "mic";
+  micToggleButton.classList.toggle("bg-red-600", isRecording);
+  micToggleButton.classList.toggle("bg-violet-600", !isRecording);
+}
+
+function setVolumeLevel(level) {
+  const clampedLevel = Math.max(0, Math.min(1, level));
+  volumeBars.forEach((bar, index) => {
+    const offset = index / Math.max(1, volumeBars.length - 1);
+    const barLevel = Math.min(1, clampedLevel * (0.7 + offset * 0.6));
+    bar.style.transform = `scaleY(${barLevel})`;
+    bar.style.opacity = String(0.25 + barLevel * 0.75);
+  });
+}
+
+function resetVolumeMeter() {
+  setVolumeLevel(0);
+}
+
+function renderGeneratedPicture(picture) {
+  if (!pictureFrame || !imageMetadataRow || !picture) {
+    return;
+  }
+
+  pictureFrame.innerHTML = "";
+
+  const image = document.createElement("img");
+  image.src = `data:image/jpeg;base64,${picture.image}`;
+  image.className = "absolute inset-0 w-full h-full object-cover";
+  image.alt = "Latest generated image";
+  pictureFrame.appendChild(image);
+
+  imageMetadataRow.innerHTML = "";
+
+  if (picture.title || picture.style) {
+    const title = document.createElement("div");
+    title.className = "font-['Space_Grotesk'] text-sm font-semibold text-slate-50";
+    title.textContent = `${picture.title || ""}${picture.style ? ` (${picture.style})` : ""}`;
+    imageMetadataRow.appendChild(title);
+  }
+
+  if (picture.description) {
+    const details = document.createElement("details");
+    details.className = "metadata-popover";
+    details.dataset.popoverText = picture.description;
+
+    const summary = document.createElement("summary");
+    summary.className = "inline-flex items-center gap-1 text-violet-300 cursor-pointer";
+
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-[16px]";
+    icon.textContent = "info";
+
+    summary.appendChild(icon);
+    summary.appendChild(document.createTextNode("Description"));
+
+    details.appendChild(summary);
+    imageMetadataRow.appendChild(details);
+  }
+
+  if (picture.transcript) {
+    const details = document.createElement("details");
+    details.className = "metadata-popover";
+    details.dataset.popoverText = picture.transcript;
+
+    const summary = document.createElement("summary");
+    summary.className = "inline-flex items-center gap-1 text-violet-300 cursor-pointer";
+
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-[16px]";
+    icon.textContent = "notes";
+
+    summary.appendChild(icon);
+    summary.appendChild(document.createTextNode("Transcript"));
+
+    details.appendChild(summary);
+    imageMetadataRow.appendChild(details);
+  }
+
+  if (picture.timestamp) {
+    const timestamp = document.createElement("span");
+    timestamp.className = "text-slate-400";
+    timestamp.textContent = `[${picture.timestamp}]`;
+    imageMetadataRow.appendChild(timestamp);
+  }
+
+  previousFrameMarkup = pictureFrame.innerHTML;
+}
+
+function renderGeneratingFrame() {
+  if (!pictureFrame) {
+    return;
+  }
+  previousFrameMarkup = pictureFrame.innerHTML;
+  pictureFrame.innerHTML = `
+    <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-900 text-slate-200">
+      <span class="frame-spinner block h-10 w-10 rounded-full border-4 border-violet-300/30 border-t-violet-300"></span>
+      <div class="font-['Manrope'] text-sm">Generating image...</div>
+    </div>
+  `;
+}
+
+function restorePreviousFrame() {
+  if (!pictureFrame) {
+    return;
+  }
+  if (previousFrameMarkup.trim() !== "") {
+    pictureFrame.innerHTML = previousFrameMarkup;
+  }
+}
+
+function flushInterimTranscript() {
+  const cleanInterim = interimTranscript.trim();
+  if (cleanInterim) {
+    transcriptHeadingOverride = "";
+    transcriptBuffer = transcriptBuffer ? `${transcriptBuffer} ${cleanInterim}` : cleanInterim;
+    interimTranscript = "";
+    renderTranscriptText();
+    updateTranscriptHeading();
+  }
+}
+
+function claimTranscriptForGeneration(headingState = "") {
+  flushInterimTranscript();
+  const transcriptSnapshot = transcriptBuffer.trim();
+  if (!transcriptSnapshot) {
+    return "";
+  }
+  clearTranscriptBuffer(headingState);
+  return transcriptSnapshot;
+}
+
+function setStatusAfterTranscriptClaim() {
+  if (recognitionActive) {
+    setStatus("Listening for speech...", "settings_voice");
+  }
+}
+
+async function generatePictureFromTranscript(transcriptSnapshot) {
+  isGeneratingPicture = true;
+  setNavigationLocked(true);
+  renderGeneratingFrame();
+  sendClientLog("auto_generate_start", "info", "", {
+    transcriptChars: transcriptSnapshot.length,
+  });
+
+  try {
+    const requestStartedAt = performance.now();
+    const response = await fetch("{{ url_for('auto_generate') }}", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({transcript: transcriptSnapshot}),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.message || "Image generation failed.");
+    }
+
+    renderGeneratedPicture(payload.picture);
+    sendClientLog("auto_generate_success", "info", "", {
+      durationMs: Math.round(performance.now() - requestStartedAt),
+      imageId: payload.picture ? payload.picture.id : null,
+    });
+    if (recognitionActive) {
+      setListeningStatus();
+    } else {
+      setStatus("Recording stopped.", "mic");
+    }
+  } catch (error) {
+    restorePreviousFrame();
+    sendClientLog("auto_generate_failed", "error", error.message || "unknown error");
+    setTransientGenerationFailureStatus(
+      `Image generation failed: ${error.message || "unknown error"}`,
+    );
+  } finally {
+    isGeneratingPicture = false;
+    if (pendingTranscriptQueue.length > 0) {
+      const nextTranscriptSnapshot = pendingTranscriptQueue.shift();
+      generatePictureFromTranscript(nextTranscriptSnapshot);
+    } else {
+      setNavigationLocked(false);
+      maybeGeneratePicture();
+    }
+  }
+}
+
+function generatePictureFromBuffer(headingState = "") {
+  const transcriptSnapshot = claimTranscriptForGeneration(headingState);
+  if (!transcriptSnapshot) {
+    return false;
+  }
+  setStatusAfterTranscriptClaim();
+  if (isGeneratingPicture) {
+    pendingTranscriptQueue.push(transcriptSnapshot);
+    return true;
+  }
+  generatePictureFromTranscript(transcriptSnapshot);
+  return true;
+}
+
+function maybeGeneratePicture() {
+  const transcriptSnapshot = transcriptBuffer.trim();
+  if (!transcriptSnapshot) {
+    clearSilenceCheck();
+    return;
+  }
+
+  if (transcriptSnapshot.length >= autoTranscriptMaxChars) {
+    generatePictureFromBuffer(transcriptHeadingStates.maxLength);
+    return;
+  }
+
+  scheduleSilenceCheck();
+}
+
+function stopRecordingState() {
+  recognition = null;
+  recognitionActive = false;
+  setMicButtonRecording(false);
+  resetVolumeMeter();
+}
+
+function startSpeechRecognition() {
+  if (!SpeechRecognition) {
+    transcriptText.textContent = "Chrome speech recognition is unavailable.";
+    setStatus("Speech recognition is unavailable.", "error");
+    return false;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+  recognition.lang = "en-US";
+
+  recognition.addEventListener("start", () => {
+    setVolumeLevel(0.2);
+    setListeningStatus();
+    sendClientLog("stt_start");
+  });
+
+  recognition.addEventListener("audiostart", () => {
+    setVolumeLevel(0.3);
+    setListeningStatus();
+  });
+
+  recognition.addEventListener("soundstart", () => {
+    setVolumeLevel(0.55);
+  });
+
+  recognition.addEventListener("soundend", () => {
+    setVolumeLevel(0.2);
+  });
+
+  recognition.addEventListener("speechstart", () => {
+    lastSpeechEndedAt = null;
+    clearSilenceCheck();
+    setVolumeLevel(0.85);
+    setStatus("Speech detected...", "settings_voice");
+    clearTranscriptHeadingOverride();
+    sendClientLog("stt_speechstart");
+  });
+
+  recognition.addEventListener("speechend", () => {
+    lastSpeechEndedAt = Date.now();
+    setVolumeLevel(0.25);
+    scheduleSilenceCheck();
+  });
+
+  recognition.addEventListener("audioend", () => {
+    setVolumeLevel(0);
+  });
+
+  recognition.addEventListener("nomatch", () => {
+    setStatus("Speech heard, but no transcript match.", "settings_voice");
+    sendClientLog("stt_nomatch", "warning");
+  });
+
+  recognition.addEventListener("result", (event) => {
+    setStatus("Transcribing speech...", "settings_voice");
+    let finalText = "";
+    let interimText = "";
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      const text = result[0] ? result[0].transcript : "";
+      if (result.isFinal) {
+        finalText = `${finalText} ${text}`.trim();
+      } else {
+        interimText = `${interimText} ${text}`.trim();
+      }
+    }
+    if (finalText) {
+      appendTranscript(finalText);
+      sendClientLog("stt_result_final", "info", "", {
+        chars: finalText.length,
+      });
+    }
+    setInterimTranscript(interimText);
+  });
+
+  recognition.addEventListener("error", (event) => {
+    if (event.error === "no-speech") {
+      setListeningStatus();
+      return;
+    }
+    recognitionActive = false;
+    setStatus(`Speech recognition failed: ${describeSpeechError(event)}`, "error");
+    sendClientLog("stt_error", "error", describeSpeechError(event), {
+      code: event.error || "unknown",
+    });
+  });
+
+  recognition.addEventListener("end", () => {
+    sendClientLog("stt_end", "info", "", {
+      recognitionActive,
+      stoppedByUser,
+    });
+    recognition = null;
+    if (recognitionActive) {
+      window.setTimeout(() => {
+        if (recognitionActive && !recognition) {
+          startSpeechRecognition();
+        }
+      }, 250);
+    } else {
+      stopRecordingState();
+      if (stoppedByUser) {
+        setStatus("Recording stopped.", "mic");
+      }
+      if (generateAfterRecognitionEnd) {
+        generateAfterRecognitionEnd = false;
+        generatePictureFromBuffer();
+      }
+    }
+  });
+
+  try {
+    recognition.start();
+    return true;
+  } catch (error) {
+    setStatus(error.message || "Speech recognition could not start.", "error");
+    return false;
+  }
+}
+
+async function startRecording() {
+  if (!SpeechRecognition) {
+    transcriptText.textContent = "Chrome speech recognition is unavailable.";
+    setStatus("Open this page in Chrome to use Auto.", "error");
+    return;
+  }
+
+  transcriptBuffer = "";
+  interimTranscript = "";
+  stoppedByUser = false;
+  generateAfterRecognitionEnd = false;
+  lastSpeechEndedAt = null;
+  pendingTranscriptQueue = [];
+  clearSilenceCheck();
+  recognitionActive = true;
+  clearTranscriptHeadingOverride();
+  renderTranscriptText();
+  setMicButtonRecording(true);
+  setStatus("Starting speech recognition...", "settings_voice");
+  sendClientLog("stt_start_requested", "info", "", {
+    userAgent: navigator.userAgent,
+  });
+
+  if (!startSpeechRecognition()) {
+    recognitionActive = false;
+    stopRecordingState();
+    return;
+  }
+}
+
+function stopRecording() {
+  recognitionActive = false;
+  stoppedByUser = true;
+  sendClientLog("stt_stop_requested");
+  if (recognition) {
+    generateAfterRecognitionEnd = true;
+    setStatus("Stopping recording...", "hourglass_empty");
+    recognition.stop();
+  } else {
+    stopRecordingState();
+    setStatus("Recording stopped.", "mic");
+    generateAfterRecognitionEnd = false;
+    generatePictureFromBuffer();
+  }
+}
+
+micToggleButton.addEventListener("click", () => {
+  if (recognitionActive || recognition) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+});
+
+function closeMetadataOverlay(frameElement) {
+  if (!frameElement) {
+    return;
+  }
+  const overlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function renderMetadataOverlay(frameElement, text) {
+  if (!frameElement) {
+    return;
+  }
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    closeMetadataOverlay(frameElement);
+    return;
+  }
+
+  const currentOverlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (currentOverlay && currentOverlay.textContent === cleanText) {
+    currentOverlay.remove();
+    return;
+  }
+  closeMetadataOverlay(frameElement);
+
+  const overlay = document.createElement("p");
+  overlay.className = "metadata-frame-overlay scrollable-content rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50";
+  overlay.textContent = cleanText;
+  overlay.addEventListener("click", () => {
+    overlay.remove();
+  });
+  frameElement.appendChild(overlay);
+}
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".metadata-frame-overlay")) {
+    return;
+  }
+
+  const metadataSummary = event.target.closest("summary");
+  const activePopover = metadataSummary
+    ? metadataSummary.closest("details.metadata-popover")
+    : null;
+  if (activePopover) {
+    event.preventDefault();
+    renderMetadataOverlay(pictureFrame, activePopover.dataset.popoverText);
+    return;
+  }
+});
+
+resetVolumeMeter();
+updateTranscriptHeading();
+setMicButtonRecording(false);
+</script>
+</body>
+</html>

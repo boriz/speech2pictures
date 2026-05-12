@@ -1,0 +1,10 @@
+<div class="shared-picture-frame" id="{{ frame_id }}">
+{% if image_data %}
+<img src="data:image/jpeg;base64,{{ image_data }}" class="absolute inset-0 w-full h-full object-cover" alt="{{ image_alt }}">
+{% else %}
+<div class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 space-y-3 px-6 text-center">
+<span class="material-symbols-outlined text-6xl opacity-60"{% if empty_icon_id %} id="{{ empty_icon_id }}"{% endif %}>{{ empty_icon }}</span>
+<p class="font-['Manrope'] text-base"{% if empty_text_id %} id="{{ empty_text_id }}"{% endif %}>{{ empty_text }}</p>
+</div>
+{% endif %}
+</div>

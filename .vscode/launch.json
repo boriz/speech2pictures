@@ -11,6 +11,24 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "Python: Flask app.py",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "env": {
+                "FLASK_APP": "app.py",
+                "FLASK_ENV": "development",
+                "FLASK_DEBUG": "1"  // make sure it is not "0"
+            },
+            "args": [
+                "run",
+                "--host=0.0.0.0"
+               // "--no-debugger", Comment out this line
+               // "--no-reload"  Comment out this line
+            ],
+            "jinja": true
         }
     ]
 }

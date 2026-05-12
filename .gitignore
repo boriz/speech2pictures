@@ -162,3 +162,8 @@ cython_debug/
 /config.py
 /image_database.sqlite
 /*.png
+/tests/artifacts
+node_modules/
+.lint-tmp/
+
+/ngrok_s2p.sh

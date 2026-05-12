@@ -1,0 +1,409 @@
+<!DOCTYPE html><html class="dark" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Speech2Pictures - Manual</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
+<link href="{{ url_for('static', filename='app_shell.css') }}" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#283044",
+                      "surface-tint": "#d0bcff",
+                      "tertiary-container": "#8691a7",
+                      "secondary-container": "#3f465c",
+                      "primary": "#d0bcff",
+                      "on-primary-fixed": "#23005c",
+                      "error": "#ffb4ab",
+                      "surface-container": "#1d2022",
+                      "secondary-fixed-dim": "#bec6e0",
+                      "on-tertiary-fixed": "#111c2d",
+                      "outline": "#958ea0",
+                      "inverse-on-surface": "#2d3133",
+                      "surface-dim": "#101415",
+                      "tertiary-fixed-dim": "#bcc7de",
+                      "on-secondary-container": "#adb4ce",
+                      "surface-variant": "#323537",
+                      "inverse-surface": "#e0e3e5",
+                      "surface-bright": "#363a3b",
+                      "on-background": "#e0e3e5",
+                      "on-tertiary": "#263143",
+                      "primary-fixed-dim": "#d0bcff",
+                      "surface": "#101415",
+                      "inverse-primary": "#6d3bd7",
+                      "on-error-container": "#ffdad6",
+                      "outline-variant": "#494454",
+                      "primary-fixed": "#e9ddff",
+                      "surface-container-highest": "#323537",
+                      "on-surface": "#e0e3e5",
+                      "surface-container-lowest": "#0b0f10",
+                      "on-primary-fixed-variant": "#5516be",
+                      "on-primary": "#3c0091",
+                      "on-primary-container": "#340080",
+                      "on-error": "#690005",
+                      "secondary-fixed": "#dae2fd",
+                      "surface-container-low": "#191c1e",
+                      "error-container": "#93000a",
+                      "on-secondary-fixed-variant": "#3f465c",
+                      "primary-container": "#a078ff",
+                      "secondary": "#bec6e0",
+                      "tertiary": "#bcc7de",
+                      "background": "#101415",
+                      "on-secondary-fixed": "#131b2e",
+                      "on-tertiary-container": "#1f2a3c",
+                      "tertiary-fixed": "#d8e3fb",
+                      "surface-container-high": "#272a2c",
+                      "on-surface-variant": "#cbc3d7",
+                      "on-tertiary-fixed-variant": "#3c475a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "container-margin": "20px",
+                      "unit": "4px",
+                      "md": "16px",
+                      "sm": "8px",
+                      "lg": "24px",
+                      "xl": "40px",
+                      "gutter": "12px"
+              },
+              "fontFamily": {
+                      "headline-lg": [
+                              "Space Grotesk"
+                      ],
+                      "headline-md": [
+                              "Space Grotesk"
+                      ],
+                      "body-md": [
+                              "Manrope"
+                      ],
+                      "label-md": [
+                              "Manrope"
+                      ],
+                      "body-lg": [
+                              "Manrope"
+                      ],
+                      "label-sm": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+    summary {
+      list-style: none;
+    }
+    summary::-webkit-details-marker {
+      display: none;
+    }
+    .metadata-popover {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .metadata-frame-overlay {
+      position: absolute;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      z-index: 30;
+      width: min(22rem, calc(100% - 1rem));
+      max-width: calc(100% - 1rem);
+      max-height: min(18rem, 55%);
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body class="app-shell-body bg-[#101415] text-slate-100 min-h-screen pb-[80px] pt-[56px]">
+<!-- TopAppBar -->
+<header class="app-shell-topbar">
+<details class="relative">
+<summary class="text-violet-500 hover:text-violet-300 transition-colors active:scale-95 duration-200 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="menu" style="">menu</span>
+</summary>
+<div class="absolute left-0 top-10 w-44 rounded-lg border border-white/10 bg-slate-950/95 shadow-xl shadow-black/40 overflow-hidden font-['Manrope'] text-sm">
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('auto') }}">Auto</a>
+<a class="block px-4 py-3 text-violet-300 bg-violet-500/10" href="{{ url_for('manual') }}">Manual</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800" href="{{ url_for('history_index') }}">History</a>
+<a class="block px-4 py-3 text-slate-300 hover:bg-slate-800 border-t border-white/10" href="{{ url_for('logout') }}">Logout</a>
+</div>
+</details>
+<div class="app-shell-topbar-title">Manual</div>
+<a class="app-shell-topbar-action" href="{{ url_for('logout') }}" aria-label="Logout">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+</a>
+</header>
+<!-- Main Content -->
+<main class="app-shell-main max-w-2xl mx-auto space-y-3">
+<!-- Image Preview Area -->
+<section class="shared-picture-section shared-picture-section-fixed">
+{% set frame_id = "manualPictureFrame" %}
+{% set image_data = Image %}
+{% set image_alt = "Generated image preview" %}
+{% set empty_icon = "image" %}
+{% set empty_text = "Awaiting prompt..." %}
+{% set empty_icon_id = None %}
+{% set empty_text_id = None %}
+{% include "partials/picture_frame.html" %}
+</section>
+<section class="app-shell-card rounded-xl border border-slate-700 bg-slate-900 min-h-[3.25rem]" id="manualImageMetadataBlock">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-['Manrope'] text-xs leading-tight text-slate-300" id="manualImageMetadataRow">
+{% if LatestImage and (LatestImage.title or LatestImage.style) %}
+<span class="font-['Space_Grotesk'] text-sm font-semibold text-slate-50">
+{% if LatestImage.title %}{{ LatestImage.title }}{% endif %}{% if LatestImage.style %} ({{ LatestImage.style }}){% endif %}
+</span>
+{% endif %}
+{% if LatestImage and LatestImage.description %}
+<details class="metadata-popover" data-popover-text="{{ LatestImage.description|e }}">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">info</span>
+Description
+</summary>
+</details>
+{% endif %}
+{% if LatestImage and LatestImage.transcript %}
+<details class="metadata-popover" data-popover-text="{{ LatestImage.transcript|e }}">
+<summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
+<span class="material-symbols-outlined text-[16px]">notes</span>
+Transcript
+</summary>
+</details>
+{% endif %}
+{% if LatestImage and LatestImage.timestamp %}
+<span class="text-slate-400">[{{ LatestImage.timestamp }}]</span>
+{% endif %}
+</div>
+</section>
+<!-- Input Section -->
+{% if Message %}
+<div class="rounded-lg border border-slate-700 bg-slate-800 p-2 font-['Manrope'] text-sm text-slate-100">
+{{ Message }}
+</div>
+{% endif %}
+<form class="space-y-3" id="manualGenerateForm" action="{{ url_for('manual_txt2img') }}" method="post">
+<!-- Transcript Input -->
+<div class="space-y-1.5">
+<label class="font-['Manrope'] text-sm font-semibold text-on-surface block" for="transcript" style="">Transcript</label>
+<textarea class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-['Manrope'] text-sm focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors resize-none p-sm" id="transcript" name="Transcript" placeholder="Paste dialogue or narrative here..." rows="3">{{ TranscriptValue|default('') }}</textarea>
+</div>
+<!-- Advanced Inputs -->
+<div class="bg-slate-900/60 rounded-xl p-2.5 space-y-2 border border-slate-700 transition-opacity" id="directControlsBlock">
+<div class="flex items-center justify-between mb-sm">
+<h3 class="font-['Manrope'] text-sm font-semibold text-on-surface flex items-center gap-2" style="">
+<span class="material-symbols-outlined text-[18px]" data-icon="tune" style="">tune</span>
+                        Direct Controls
+                     </h3>
+</div>
+<div class="space-y-1.5">
+<label class="font-['Manrope'] text-xs font-semibold text-on-surface-variant block" for="title" style="">Title</label>
+<input class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-['Manrope'] text-sm focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors px-sm py-2" id="title" name="Title" placeholder="Scene title..." type="text" value="{{ TitleValue|default('') }}">
+</div><div class="space-y-1.5">
+<label class="font-['Manrope'] text-xs font-semibold text-on-surface-variant block" for="style" style="">Style</label>
+<input class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-['Manrope'] text-sm focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors px-sm py-2" id="style" name="Style" placeholder="e.g. Cinematic, Anime, Photoreal" type="text" value="{{ StyleValue|default('') }}">
+</div>
+<div class="space-y-1.5">
+<label class="font-['Manrope'] text-xs font-semibold text-on-surface-variant block" for="description" style="">Description</label>
+<textarea class="w-full bg-surface-container rounded-lg border-outline-variant text-on-surface font-['Manrope'] text-sm focus:border-primary focus:ring-1 focus:ring-primary placeholder-on-surface-variant/50 transition-colors resize-none p-sm" id="description" name="Description" placeholder="Specific visual details..." rows="2">{{ DescriptionValue|default('') }}</textarea>
+</div>
+</div>
+<!-- Generate Button -->
+<button id="manualGenerateButton" type="submit" class="w-full bg-gradient-to-r from-inverse-primary to-primary-container text-white font-['Manrope'] text-sm font-semibold py-3 rounded-lg shadow-[0_0_20px_rgba(139,92,246,0.15)] hover:shadow-[0_0_30px_rgba(139,92,246,0.3)] transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2" style="">
+<span class="material-symbols-outlined" data-icon="auto_awesome" style="font-variation-settings: &quot;FILL&quot; 1;">auto_awesome</span>
+                Generate Image
+            </button>
+<!-- History Navigation Controls (Placeholder logic) -->
+</form>
+</main>
+<!-- BottomNavBar -->
+<nav class="app-shell-nav fixed bottom-0 left-1/2 w-full max-w-2xl -translate-x-1/2 z-50 flex justify-around items-center bg-slate-950/80 backdrop-blur-xl border-t border-white/10 shadow-[0_-4px_20px_rgba(139,92,246,0.15)] rounded-t-2xl">
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('auto') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="bolt" style="">bolt</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">Auto</span>
+</a><a class="flex flex-col items-center justify-center text-violet-400 bg-violet-500/10 rounded-xl px-4 py-1 active:scale-90 duration-150" href="{{ url_for('manual') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="photo_library" style="">photo_library</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">Manual</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('history_index') }}" style="">
+<span class="material-symbols-outlined mb-1" data-icon="history" style="">history</span>
+<span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest" style="">History</span>
+</a>
+</nav>
+<script>
+const manualGenerateForm = document.getElementById("manualGenerateForm");
+const transcriptInput = document.getElementById("transcript");
+const titleInput = document.getElementById("title");
+const styleInput = document.getElementById("style");
+const descriptionInput = document.getElementById("description");
+const directControlsBlock = document.getElementById("directControlsBlock");
+const manualPictureFrame = document.getElementById("manualPictureFrame");
+const manualGenerateButton = document.getElementById("manualGenerateButton");
+
+function setNavigationLocked(isLocked) {
+  document
+    .querySelectorAll(".app-shell-topbar a, .app-shell-nav a")
+    .forEach((link) => {
+      if (isLocked) {
+        if (!link.dataset.originalTabIndex) {
+          link.dataset.originalTabIndex = link.getAttribute("tabindex") || "";
+        }
+        link.setAttribute("aria-disabled", "true");
+        link.setAttribute("tabindex", "-1");
+      } else {
+        link.removeAttribute("aria-disabled");
+        if (link.dataset.originalTabIndex) {
+          link.setAttribute("tabindex", link.dataset.originalTabIndex);
+        } else {
+          link.removeAttribute("tabindex");
+        }
+        delete link.dataset.originalTabIndex;
+      }
+      link.classList.toggle("pointer-events-none", isLocked);
+      link.classList.toggle("opacity-40", isLocked);
+    });
+}
+
+function updateManualControlsState() {
+  const transcriptValue = (transcriptInput.value || "").trim();
+  const useAutoFields = transcriptValue !== "";
+  [titleInput, styleInput, descriptionInput].forEach((field) => {
+    field.disabled = useAutoFields;
+  });
+  directControlsBlock.classList.toggle("opacity-60", useAutoFields);
+}
+
+function renderManualGeneratingFrame() {
+  if (!manualPictureFrame) {
+    return;
+  }
+  manualPictureFrame.innerHTML = `
+    <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-slate-900 text-slate-200">
+      <span class="frame-spinner block h-10 w-10 rounded-full border-4 border-violet-300/30 border-t-violet-300"></span>
+      <div class="font-['Manrope'] text-sm">Generating image...</div>
+    </div>
+  `;
+}
+
+manualGenerateForm.addEventListener("submit", (event) => {
+  if (manualGenerateForm.dataset.submitting === "1") {
+    event.preventDefault();
+    return;
+  }
+  manualGenerateForm.dataset.submitting = "1";
+  manualGenerateButton.disabled = true;
+  setNavigationLocked(true);
+  renderManualGeneratingFrame();
+});
+
+transcriptInput.addEventListener("input", updateManualControlsState);
+updateManualControlsState();
+
+function closeMetadataOverlay(frameElement) {
+  if (!frameElement) {
+    return;
+  }
+  const overlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function renderMetadataOverlay(frameElement, text) {
+  if (!frameElement) {
+    return;
+  }
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    closeMetadataOverlay(frameElement);
+    return;
+  }
+
+  const currentOverlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (currentOverlay && currentOverlay.textContent === cleanText) {
+    currentOverlay.remove();
+    return;
+  }
+  closeMetadataOverlay(frameElement);
+
+  const overlay = document.createElement("p");
+  overlay.className = "metadata-frame-overlay scrollable-content rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50";
+  overlay.textContent = cleanText;
+  overlay.addEventListener("click", () => {
+    overlay.remove();
+  });
+  frameElement.appendChild(overlay);
+}
+
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".metadata-frame-overlay")) {
+    return;
+  }
+
+  const metadataSummary = event.target.closest("summary");
+  const activePopover = metadataSummary
+    ? metadataSummary.closest("details.metadata-popover")
+    : null;
+  if (activePopover) {
+    event.preventDefault();
+    renderMetadataOverlay(manualPictureFrame, activePopover.dataset.popoverText);
+  }
+});
+</script>
+</body></html>
