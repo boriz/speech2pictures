@@ -5,8 +5,23 @@ class config:
     ]
     auth_session_secret = "replace-with-a-long-random-string"
 
-    # Auto tab: characters to accumulate before auto-generation triggers.
-    auto_transcript_target_chars = 300
+    # Auto tab: minimum transcript word count considered meaningful. Shorter
+    # text can be discarded after a silence timeout because it is likely a
+    # recognition glitch.
+    auto_transcript_min_words = 3
+
+    # Auto tab: if speech has ended and the transcript is shorter than the
+    # minimum word count, discard it after this many seconds without more
+    # speech.
+    auto_silence_discard_seconds = 120
+
+    # Auto tab: if speech has ended and the transcript is at least the minimum
+    # word count, generate an image after this many seconds without more speech.
+    auto_silence_generate_seconds = 60
+
+    # Auto tab: hard cap for the transcript buffer. Generate immediately when
+    # this many characters are captured, even if silence timeout has not fired.
+    auto_transcript_max_chars = 700
 
     # History tab: number of newest images shown in the gallery.
     history_recent_limit = 50

@@ -1,4 +1,4 @@
-.mobile-shell-body {
+.app-shell-body {
   --shell-main-x: 1rem;
   --shell-main-y: 0.75rem;
   --shell-main-gap: 0.5rem;
@@ -8,7 +8,7 @@
   font-family: "Manrope", sans-serif;
 }
 
-.mobile-shell-main {
+.app-shell-main {
   padding-left: var(--shell-main-x);
   padding-right: var(--shell-main-x);
   padding-top: var(--shell-main-y);
@@ -16,22 +16,22 @@
   gap: var(--shell-main-gap);
 }
 
-.mobile-shell-main-fixed {
+.app-shell-main-fixed {
   position: fixed;
 }
 
-.mobile-shell-card {
+.app-shell-card {
   padding: var(--shell-card-pad);
 }
 
-.mobile-shell-nav {
+.app-shell-nav {
   padding-left: var(--shell-nav-pad-x);
   padding-right: var(--shell-nav-pad-x);
   padding-top: var(--shell-nav-pad-y);
   padding-bottom: var(--shell-nav-pad-y);
 }
 
-.mobile-shell-topbar {
+.app-shell-topbar {
   position: fixed;
   top: 0;
   left: 50%;
@@ -50,7 +50,7 @@
   backdrop-filter: blur(12px);
 }
 
-.mobile-shell-topbar-title {
+.app-shell-topbar-title {
   font-family: "Space Grotesk", sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
@@ -59,7 +59,7 @@
   color: rgb(248 250 252);
 }
 
-.mobile-shell-topbar-action {
+.app-shell-topbar-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -69,8 +69,31 @@
   border-radius: 0.375rem;
 }
 
-.mobile-shell-topbar-action:hover {
+.app-shell-topbar-action:hover {
   background: rgb(51 65 85 / 0.5);
+}
+
+.scrollable-content {
+  scrollbar-color: rgb(124 58 237 / 0.7) rgb(15 23 42 / 0.8);
+  scrollbar-width: thin;
+}
+
+.scrollable-content::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.scrollable-content::-webkit-scrollbar-track {
+  background: rgb(15 23 42 / 0.8);
+  border-radius: 9999px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb {
+  background: rgb(124 58 237 / 0.7);
+  border-radius: 9999px;
+}
+
+.scrollable-content::-webkit-scrollbar-thumb:hover {
+  background: rgb(167 139 250 / 0.85);
 }
 
 .shared-picture-section {

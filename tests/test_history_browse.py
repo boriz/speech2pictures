@@ -185,7 +185,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"saved description", response.data)
         self.assertIn(b"openHistoryModalFromButton", response.data)
 
-    def test_mobile_shell_routes_include_consistent_nav(self):
+    def test_app_shell_routes_include_consistent_nav(self):
         for path, active_label in (
             ("/auto", b"Auto"),
             ("/manual", b"Manual"),
@@ -202,9 +202,9 @@ class HistoryBrowseUiTests(unittest.TestCase):
             self.assertNotIn(b"md:hidden", response.data)
             self.assertIn(b"left-1/2", response.data)
             self.assertIn(b"max-w-2xl", response.data)
-            self.assertIn(b"mobile-shell-topbar", response.data)
-            self.assertIn(b"mobile-shell-topbar-title", response.data)
-            self.assertIn(b"mobile-shell-topbar-action", response.data)
+            self.assertIn(b"app-shell-topbar", response.data)
+            self.assertIn(b"app-shell-topbar-title", response.data)
+            self.assertIn(b"app-shell-topbar-action", response.data)
 
     def test_auto_page_has_recording_controls(self):
         response = self.client.get("/auto")
@@ -222,7 +222,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertNotIn(b'id="stopButton"', response.data)
         self.assertIn(b'id="volumeMeter"', response.data)
         self.assertIn(b'id="transcriptHeading"', response.data)
-        self.assertIn(b"Transcript (0%)", response.data)
+        self.assertIn(b"Transcript: empty", response.data)
         self.assertIn(b'id="transcriptText"', response.data)
         self.assertIn(b"No picture yet. Ready to record audio.", response.data)
         self.assertIn(b'id="statusText"', response.data)
@@ -230,13 +230,52 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"/auto/generate", response.data)
         self.assertIn(b'href="/manual"', response.data)
         self.assertIn(b'href="/history"', response.data)
-        configured_chars = getattr(
+        configured_min_words = getattr(
             self.app_module.config,
-            "auto_transcript_target_chars",
-            200,
+            "auto_transcript_min_words",
+            self.app_module.AUTO_TRANSCRIPT_MIN_WORDS_DEFAULT,
+        )
+        configured_discard_seconds = getattr(
+            self.app_module.config,
+            "auto_silence_discard_seconds",
+            self.app_module.AUTO_SILENCE_DISCARD_SECONDS_DEFAULT,
+        )
+        configured_generate_seconds = getattr(
+            self.app_module.config,
+            "auto_silence_generate_seconds",
+            self.app_module.AUTO_SILENCE_GENERATE_SECONDS_DEFAULT,
+        )
+        configured_max_chars = getattr(
+            self.app_module.config,
+            "auto_transcript_max_chars",
+            self.app_module.AUTO_TRANSCRIPT_MAX_CHARS_DEFAULT,
         )
         self.assertIn(
-            f"const autoTranscriptTargetChars = {int(configured_chars)};".encode(),
+            (
+                "const autoTranscriptMinWords = "
+                f"Math.max(1, {int(configured_min_words)});"
+            ).encode(),
+            response.data,
+        )
+        self.assertIn(
+            (
+                "const autoSilenceDiscardSeconds = "
+                f"Math.max(0, {int(configured_discard_seconds)});"
+            ).encode(),
+            response.data,
+        )
+        self.assertIn(
+            (
+                "const autoSilenceGenerateSeconds = "
+                f"Math.max(0, {int(configured_generate_seconds)});"
+            ).encode(),
+            response.data,
+        )
+        self.assertIn(
+            (
+                "const autoTranscriptMaxChars = "
+                f"Math.max(1, {int(configured_max_chars)});"
+            ).encode(),
             response.data,
         )
         self.assertIn(
@@ -281,8 +320,20 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertNotIn(b"getUserMedia", response.data)
         self.assertNotIn(b"getByteTimeDomainData", response.data)
         self.assertNotIn(b"createAnalyser", response.data)
+        self.assertNotIn(b"autoTranscriptTargetChars", response.data)
+        self.assertNotIn(b"Transcript (", response.data)
+        self.assertIn(b"countTranscriptWords", response.data)
+        self.assertIn(b"words (${autoTranscriptMinWords} min)", response.data)
+        self.assertIn(b"lastSpeechEndedAt = Date.now()", response.data)
+        self.assertIn(b"scheduleSilenceCheck()", response.data)
+        self.assertIn(b"Waiting for more speech - discarding in", response.data)
+        self.assertIn(b"Speech paused - generating in", response.data)
+        self.assertIn(b"Discarded short transcript.", response.data)
+        self.assertIn(b"Transcript: discarded short transcript", response.data)
+        self.assertIn(b"Transcript: ready for new image", response.data)
+        self.assertIn(b"Transcript: max length reached", response.data)
         self.assertIn(
-            b"transcriptBuffer.length / autoTranscriptTargetChars",
+            b"transcriptSnapshot.length >= autoTranscriptMaxChars",
             response.data,
         )
         self.assertIn(b"appendTranscript(finalText)", response.data)
@@ -294,18 +345,40 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"renderGeneratingFrame()", response.data)
         self.assertIn(b"restorePreviousFrame()", response.data)
         self.assertIn(b"Generating image...", response.data)
+        self.assertIn(b"setNavigationLocked(true)", response.data)
+        self.assertIn(b"setNavigationLocked(false)", response.data)
+        self.assertIn(
+            b'.querySelectorAll(".app-shell-topbar a, .app-shell-nav a")',
+            response.data,
+        )
+        self.assertIn(b'link.setAttribute("aria-disabled", "true")', response.data)
         self.assertIn(b"frame-spinner", response.data)
         self.assertIn(b'const clientLogEndpoint = "/client-log";', response.data)
         self.assertIn(b"sendClientLog(", response.data)
         self.assertIn(b"clientSessionId", response.data)
-        self.assertIn(b"claimTranscriptForGeneration()", response.data)
+        self.assertIn(
+            b'claimTranscriptForGeneration(headingState = "")',
+            response.data,
+        )
+        self.assertIn(b"setStatusAfterTranscriptClaim()", response.data)
         self.assertIn(b"transcriptSnapshot = transcriptBuffer.trim()", response.data)
-        self.assertIn(b"generatePictureFromBuffer(true)", response.data)
+        self.assertIn(b"generatePictureFromBuffer()", response.data)
         self.assertIn(b"generateAfterRecognitionEnd = true", response.data)
-        self.assertIn(b"forceGenerateWhenReady", response.data)
+        self.assertIn(b"pendingTranscriptQueue", response.data)
         self.assertIn(b'transcriptBuffer = ""', response.data)
-        self.assertIn(b'event.target.closest(".metadata-popover-panel")', response.data)
-        self.assertIn(b'popoverPanel.closest("details")', response.data)
+        self.assertIn(b"metadata-frame-overlay", response.data)
+        self.assertIn(b"closeMetadataOverlay(frameElement)", response.data)
+        self.assertIn(
+            b"renderMetadataOverlay(pictureFrame, activePopover.dataset.popoverText)",
+            response.data,
+        )
+        self.assertIn(b"currentOverlay.textContent === cleanText", response.data)
+        self.assertIn(b'closest("details.metadata-popover")', response.data)
+        self.assertIn(b"event.preventDefault()", response.data)
+        self.assertIn(b'event.target.closest(".metadata-frame-overlay")', response.data)
+        self.assertNotIn(b"metadata-popover-panel", response.data)
+        self.assertNotIn(b"positionMetadataPopover", response.data)
+        self.assertNotIn(b"closeOtherMetadataPopovers", response.data)
         self.assertNotIn(b"setInterval", response.data)
         self.assertNotIn(b"volume-pulse", response.data)
 
@@ -324,6 +397,13 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"updateManualControlsState()", response.data)
         self.assertIn(b"renderManualGeneratingFrame()", response.data)
         self.assertIn(b"manualGenerateForm.dataset.submitting", response.data)
+        self.assertIn(b"manualGenerateButton.disabled = true", response.data)
+        self.assertIn(b"setNavigationLocked(true)", response.data)
+        self.assertIn(
+            b'.querySelectorAll(".app-shell-topbar a, .app-shell-nav a")',
+            response.data,
+        )
+        self.assertIn(b'link.setAttribute("aria-disabled", "true")', response.data)
         self.assertIn(b"Generating image...", response.data)
         self.assertIn(b"frame-spinner", response.data)
 
@@ -374,12 +454,23 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"Description", response.data)
         self.assertIn(b"Transcript", response.data)
         self.assertIn(b"metadata-popover", response.data)
-        self.assertIn(b"metadata-popover-panel", response.data)
-        self.assertIn(b"position: fixed", response.data)
+        self.assertIn(b"metadata-frame-overlay", response.data)
+        self.assertIn(b' data-popover-text="latest description"', response.data)
+        self.assertIn(b' data-popover-text="latest transcript"', response.data)
+        self.assertIn(b"position: absolute", response.data)
         self.assertIn(b"left: 50%;", response.data)
-        self.assertIn(b"top: 50%;", response.data)
-        self.assertIn(b"transform: translate(-50%, -50%)", response.data)
-        self.assertIn(b"width: min(22rem, calc(100vw - 2.5rem))", response.data)
+        self.assertIn(b"bottom: 0;", response.data)
+        self.assertIn(b"transform: translateX(-50%)", response.data)
+        self.assertIn(
+            b"renderMetadataOverlay(pictureFrame, activePopover.dataset.popoverText)",
+            response.data,
+        )
+        self.assertIn(b"frameElement.appendChild(overlay)", response.data)
+        self.assertIn(b"currentOverlay.textContent === cleanText", response.data)
+        self.assertIn(b"width: min(22rem, calc(100% - 1rem))", response.data)
+        self.assertNotIn(b"metadata-popover-panel", response.data)
+        self.assertNotIn(b"positionMetadataPopover", response.data)
+        self.assertNotIn(b"getBoundingClientRect()", response.data)
         self.assertIn(b"<details", response.data)
         self.assertIn(b"<summary", response.data)
         self.assertIn(b"latest description", response.data)
@@ -515,8 +606,18 @@ class HistoryBrowseUiTests(unittest.TestCase):
             b'id="transcript" name="Transcript" placeholder="Paste dialogue or narrative here..." rows="3"></textarea>',
             response.data,
         )
+        self.assertIn(b"metadata-frame-overlay", response.data)
+        self.assertIn(
+            b"renderMetadataOverlay(manualPictureFrame, activePopover.dataset.popoverText)",
+            response.data,
+        )
+        self.assertIn(b"currentOverlay.textContent === cleanText", response.data)
+        self.assertIn(b'closest("details.metadata-popover")', response.data)
+        self.assertIn(b"event.preventDefault()", response.data)
+        self.assertNotIn(b"metadata-popover-panel", response.data)
+        self.assertNotIn(b"positionMetadataPopover", response.data)
 
-    def test_mobile_history_shows_rich_metadata_with_conditional_transcript(self):
+    def test_history_shows_rich_metadata_with_conditional_transcript(self):
         image_id = self.add_record(
             "visible transcript",
             "visible title",
@@ -538,15 +639,33 @@ class HistoryBrowseUiTests(unittest.TestCase):
             b'modalTitleStyle.textContent = `${title}${style ? ` (${style})` : ""}`.trim();',
             response.data,
         )
-        self.assertIn(b"metadata-popover-panel", response.data)
+        self.assertIn(b"metadata-frame-overlay", response.data)
         self.assertIn(b"aspect-square", response.data)
         self.assertIn(b"historyModal", response.data)
         self.assertIn(b"object-cover", response.data)
         self.assertIn(b"modalScrollAnchorY = window.scrollY", response.data)
         self.assertIn(b"window.scrollTo(0, modalScrollAnchorY)", response.data)
-        self.assertIn(b"position: fixed", response.data)
+        self.assertIn(b"position: absolute", response.data)
         self.assertIn(b"left: 50%;", response.data)
-        self.assertIn(b"top: 50%;", response.data)
+        self.assertIn(b"bottom: 0;", response.data)
+        self.assertIn(b"transform: translateX(-50%)", response.data)
+        self.assertIn(
+            b"modalDescriptionDetails.dataset.popoverText = description",
+            response.data,
+        )
+        self.assertIn(
+            b"modalTranscriptDetails.dataset.popoverText = transcript",
+            response.data,
+        )
+        self.assertIn(b"currentOverlay.textContent === cleanText", response.data)
+        self.assertIn(
+            b"closeMetadataOverlay(modalImage ? modalImage.parentElement : null)",
+            response.data,
+        )
+        self.assertIn(b"modalImage ? modalImage.parentElement : null", response.data)
+        self.assertNotIn(b"metadata-popover-panel", response.data)
+        self.assertNotIn(b"positionMetadataPopover", response.data)
+        self.assertNotIn(b"getBoundingClientRect()", response.data)
         self.assertIn(b"[", response.data)
         self.assertIn(b"data:image/jpeg;base64", response.data)
         self.assertIn(
@@ -555,7 +674,10 @@ class HistoryBrowseUiTests(unittest.TestCase):
         )
         self.assertNotIn(b"history-thumbnail-selected", response.data)
         self.assertIn(b"selectedButton.scrollIntoView({", response.data)
-        self.assertIn(b'event.target.closest(".metadata-popover-panel")', response.data)
+        self.assertIn(b'closest("details.metadata-popover")', response.data)
+        self.assertIn(b"event.preventDefault()", response.data)
+        self.assertIn(b'event.target.closest(".metadata-frame-overlay")', response.data)
+        self.assertNotIn(b"closeOtherMetadataPopovers", response.data)
 
         no_transcript_id = self.add_record(
             "",
@@ -575,7 +697,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
             response.data,
         )
 
-    def test_mobile_history_only_loads_latest_fifty_records(self):
+    def test_history_only_loads_latest_fifty_records(self):
         for index in range(80):
             self.add_record(
                 f"transcript {index}",
@@ -592,7 +714,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertIn(b"title 79", response.data)
         self.assertNotIn(b"title 29", response.data)
 
-    def test_mobile_history_honors_configurable_recent_limit(self):
+    def test_history_honors_configurable_recent_limit(self):
         for index in range(80):
             self.add_record(
                 f"transcript {index}",
@@ -619,7 +741,7 @@ class HistoryBrowseUiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data.count(b'id="thumb-'), 5)
 
-    def test_mobile_history_falls_back_to_default_limit_when_missing(self):
+    def test_history_falls_back_to_default_limit_when_missing(self):
         for index in range(80):
             self.add_record(
                 f"transcript {index}",

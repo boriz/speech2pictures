@@ -23,7 +23,7 @@ if [[ "" !=  "$PIDS" ]]; then
 fi
 
 # Map port 5000 to the configured ngrok domain.
-ngrok http --domain=$DOMAIN 5000 &
+ngrok http --url=$DOMAIN 5000 &
 
 # Finally run the app.
 ./run_app.sh

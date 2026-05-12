@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet">
-<link href="{{ url_for('static', filename='mobile_shell.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='app_shell.css') }}" rel="stylesheet">
 <style>
 summary {
   list-style: none;
@@ -20,15 +20,15 @@ summary::-webkit-details-marker {
   display: inline-flex;
   align-items: center;
 }
-.metadata-popover-panel {
-  position: fixed;
+.metadata-frame-overlay {
+  position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 80;
-  width: min(22rem, calc(100vw - 2.5rem));
-  max-width: calc(100vw - 2.5rem);
-  max-height: min(18rem, 45vh);
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(22rem, calc(100% - 1rem));
+  max-width: calc(100% - 1rem);
+  max-height: min(18rem, 55%);
   overflow: auto;
   white-space: pre-wrap;
 }
@@ -37,8 +37,8 @@ summary::-webkit-details-marker {
 }
 </style>
 </head>
-<body class="mobile-shell-body bg-[#101415] text-slate-100 min-h-screen pb-[80px] pt-[56px]">
-<header class="mobile-shell-topbar">
+<body class="app-shell-body bg-[#101415] text-slate-100 min-h-screen pb-[80px] pt-[56px]">
+<header class="app-shell-topbar">
 <details class="relative">
 <summary class="text-violet-500 hover:text-violet-300 transition-colors active:scale-95 duration-200 cursor-pointer">
 <span class="material-symbols-outlined">menu</span>
@@ -50,12 +50,12 @@ summary::-webkit-details-marker {
 <a class="block px-4 py-3 text-slate-300 hover:bg-slate-800 border-t border-white/10" href="{{ url_for('logout') }}">Logout</a>
 </div>
 </details>
-<div class="mobile-shell-topbar-title">History</div>
-<a class="mobile-shell-topbar-action" href="{{ url_for('logout') }}" aria-label="Logout">
+<div class="app-shell-topbar-title">History</div>
+<a class="app-shell-topbar-action" href="{{ url_for('logout') }}" aria-label="Logout">
 <span class="material-symbols-outlined text-[18px]">logout</span>
 </a>
 </header>
-<main class="mobile-shell-main max-w-2xl mx-auto">
+<main class="app-shell-main max-w-2xl mx-auto">
 {% if Message %}
 <div class="rounded-lg border border-slate-700 bg-slate-800 p-2 font-['Manrope'] text-slate-200 mb-3">
 {{ Message }}
@@ -99,21 +99,19 @@ summary::-webkit-details-marker {
 <span class="material-symbols-outlined text-[16px]">info</span>
 Description
 </summary>
-<p id="modalDescriptionText" class="metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50"></p>
 </details>
 <details id="modalTranscriptDetails" class="metadata-popover hidden">
 <summary class="inline-flex items-center gap-1 text-violet-300 cursor-pointer">
 <span class="material-symbols-outlined text-[16px]">notes</span>
 Transcript
 </summary>
-<p id="modalTranscriptText" class="metadata-popover-panel rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50"></p>
 </details>
 <span id="modalTimestamp" class="text-slate-400"></span>
 </div>
 </div>
 </div>
 </div>
-<nav class="mobile-shell-nav fixed bottom-0 left-1/2 w-full max-w-2xl -translate-x-1/2 z-50 flex justify-around items-center bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
+<nav class="app-shell-nav fixed bottom-0 left-1/2 w-full max-w-2xl -translate-x-1/2 z-50 flex justify-around items-center bg-slate-950/80 backdrop-blur-xl border-t border-white/10 rounded-t-2xl">
 <a class="flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 transition-all active:scale-90 duration-150 px-4 py-1 rounded-xl" href="{{ url_for('auto') }}">
 <span class="material-symbols-outlined mb-1">bolt</span>
 <span class="font-['Space_Grotesk'] text-[10px] font-medium uppercase tracking-widest">Auto</span>
@@ -134,9 +132,7 @@ const modalImage = document.getElementById("modalImage");
 const modalTitleStyle = document.getElementById("modalTitleStyle");
 const modalTimestamp = document.getElementById("modalTimestamp");
 const modalDescriptionDetails = document.getElementById("modalDescriptionDetails");
-const modalDescriptionText = document.getElementById("modalDescriptionText");
 const modalTranscriptDetails = document.getElementById("modalTranscriptDetails");
-const modalTranscriptText = document.getElementById("modalTranscriptText");
 const selectedImageId = {{ SelectedID if SelectedID is not none else "null" }};
 let modalScrollAnchorY = null;
 
@@ -157,19 +153,19 @@ function openHistoryModalFromButton(button) {
   modalTimestamp.textContent = timestamp ? `[${timestamp}]` : "";
 
   if (description) {
-    modalDescriptionText.textContent = description;
+    modalDescriptionDetails.dataset.popoverText = description;
     modalDescriptionDetails.classList.remove("hidden");
   } else {
-    modalDescriptionText.textContent = "";
+    delete modalDescriptionDetails.dataset.popoverText;
     modalDescriptionDetails.classList.add("hidden");
     modalDescriptionDetails.open = false;
   }
 
   if (transcript) {
-    modalTranscriptText.textContent = transcript;
+    modalTranscriptDetails.dataset.popoverText = transcript;
     modalTranscriptDetails.classList.remove("hidden");
   } else {
-    modalTranscriptText.textContent = "";
+    delete modalTranscriptDetails.dataset.popoverText;
     modalTranscriptDetails.classList.add("hidden");
     modalTranscriptDetails.open = false;
   }
@@ -186,10 +182,47 @@ function closeHistoryModal() {
   historyModal.classList.remove("flex");
   modalDescriptionDetails.open = false;
   modalTranscriptDetails.open = false;
+  closeMetadataOverlay(modalImage ? modalImage.parentElement : null);
   if (modalScrollAnchorY !== null) {
     window.scrollTo(0, modalScrollAnchorY);
     modalScrollAnchorY = null;
   }
+}
+
+function closeMetadataOverlay(frameElement) {
+  if (!frameElement) {
+    return;
+  }
+  const overlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (overlay) {
+    overlay.remove();
+  }
+}
+
+function renderMetadataOverlay(frameElement, text) {
+  if (!frameElement) {
+    return;
+  }
+  const cleanText = (text || "").trim();
+  if (!cleanText) {
+    closeMetadataOverlay(frameElement);
+    return;
+  }
+
+  const currentOverlay = frameElement.querySelector(".metadata-frame-overlay");
+  if (currentOverlay && currentOverlay.textContent === cleanText) {
+    currentOverlay.remove();
+    return;
+  }
+  closeMetadataOverlay(frameElement);
+
+  const overlay = document.createElement("p");
+  overlay.className = "metadata-frame-overlay scrollable-content rounded-lg border border-white/10 bg-slate-950 p-3 text-sm text-slate-200 shadow-xl shadow-black/50";
+  overlay.textContent = cleanText;
+  overlay.addEventListener("click", () => {
+    overlay.remove();
+  });
+  frameElement.appendChild(overlay);
 }
 
 document.addEventListener("click", (event) => {
@@ -200,12 +233,20 @@ document.addEventListener("click", (event) => {
     return;
   }
 
-  const popoverPanel = event.target.closest(".metadata-popover-panel");
-  if (popoverPanel) {
-    const popover = popoverPanel.closest("details");
-    if (popover) {
-      popover.open = false;
-    }
+  if (event.target.closest(".metadata-frame-overlay")) {
+    return;
+  }
+
+  const metadataSummary = event.target.closest("summary");
+  const activePopover = metadataSummary
+    ? metadataSummary.closest("details.metadata-popover")
+    : null;
+  if (activePopover) {
+    event.preventDefault();
+    renderMetadataOverlay(
+      modalImage ? modalImage.parentElement : null,
+      activePopover.dataset.popoverText
+    );
     return;
   }
 

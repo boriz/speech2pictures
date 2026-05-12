@@ -121,8 +121,8 @@ class BrowserE2eTests(unittest.TestCase):
         page.wait_for_url("**/auto")
         page.wait_for_selector("#pictureFrame")
         page.screenshot(path=artifact_prefix + "_auto.png", full_page=True)
-        self._assert_visible_in_viewport(page, ".mobile-shell-topbar")
-        self._assert_visible_in_viewport(page, ".mobile-shell-nav")
+        self._assert_visible_in_viewport(page, ".app-shell-topbar")
+        self._assert_visible_in_viewport(page, ".app-shell-nav")
 
         # Auto page should render a square image frame within the viewport.
         frame_box = page.locator("#pictureFrame").bounding_box()
@@ -148,8 +148,8 @@ class BrowserE2eTests(unittest.TestCase):
         page.goto(base_url + "/history")
         page.wait_for_selector("[data-history-thumb]")
         page.screenshot(path=artifact_prefix + "_history_gallery.png", full_page=True)
-        self._assert_visible_in_viewport(page, ".mobile-shell-topbar")
-        self._assert_visible_in_viewport(page, ".mobile-shell-nav")
+        self._assert_visible_in_viewport(page, ".app-shell-topbar")
+        self._assert_visible_in_viewport(page, ".app-shell-nav")
         self._assert_visible_in_viewport(page, "[data-history-thumb]")
 
         first_thumb = page.locator("[data-history-thumb]").first

@@ -16,12 +16,15 @@ The app has three tabs:
 ### Auto Tab
 
 - Works as an AI picture frame.
-- User starts microphone in Chrome.
+- User starts microphone in Chrome. Auto uses browser speech recognition, so
+  Chrome is required for live speech capture.
 - Transcript text accumulates in a buffer.
-- Transcript header shows progress as `Transcript (N%)`.
-- When buffer reaches target size, image is generated and saved.
+- Transcript header shows word count as `Transcript: 58 words (3 min)`.
+- After speech pauses, meaningful transcripts generate after the configured
+  timeout; short transcripts are discarded after their configured timeout.
+- Reaching the configured transcript character limit generates immediately.
 - Main frame shows latest image with `Title (Style)` and timestamp.
-- Description and transcript are available in popup/tooltip UI.
+- Description and transcript are available as frame overlays.
 
 ### Manual Tab
 
@@ -38,7 +41,9 @@ The app has three tabs:
 
 ## Setup
 
-1. Copy `config_template.py` to `config.py` and fill in local values.
+1. Copy `config_template.py` to `config.py` and fill in local values:
+   `auth_passwords`, `auth_session_secret`, OpenAI settings, image settings,
+   and database/log paths as needed.
 2. Install dependencies:
 
 ```bash
@@ -49,6 +54,17 @@ python3 -m pip install -r requirements.txt
 
 ## Run
 
+Normal local run:
+
+```bash
+./run_app.sh
+```
+
+By default this serves `http://0.0.0.0:5000/auto`. Override host or port with
+`FLASK_RUN_HOST` and `FLASK_RUN_PORT`.
+
+Direct Flask run, useful when you want a specific localhost port:
+
 ```bash
 source ./activate_venv.sh
 python3 -m flask --app app run --host 127.0.0.1 --port 5055
@@ -56,12 +72,37 @@ python3 -m flask --app app run --host 127.0.0.1 --port 5055
 
 Open `http://127.0.0.1:5055/auto`.
 
+## ngrok
+
+Use the template for local ngrok exposure:
+
+```bash
+cp ngrok_s2p.sh.template ngrok_s2p.sh
+```
+
+Edit `DOMAIN` in `ngrok_s2p.sh`, then run:
+
+```bash
+./ngrok_s2p.sh
+```
+
+The script maps ngrok to port `5000` with `ngrok http --url=... 5000` and then
+starts the app through `./run_app.sh`.
+
 ## Test
 
 ```bash
 source ./activate_venv.sh
 python3 -m unittest
 ```
+
+Optional browser E2E test:
+
+```bash
+SPEECH2PICTURES_RUN_BROWSER_TEST=1 python3 -m unittest tests.test_browser_e2e
+```
+
+This requires Playwright and browser dependencies.
 
 ## Linting
 
@@ -90,7 +131,17 @@ Optional local gate commands before commit:
 ## Configuration
 
 Configuration variable details are documented inline in
-`config_template.py` and `config.py` comments.
+`config_template.py` and `config.py` comments. Common values to tune:
+
+- Auto transcript behavior: `auto_transcript_min_words`,
+  `auto_silence_discard_seconds`, `auto_silence_generate_seconds`,
+  `auto_transcript_max_chars`.
+- History size: `history_recent_limit`.
+- Image generation: `image_width`, `image_height`,
+  `image_num_inference_steps`, and memory/performance toggles such as
+  `image_enable_low_vram`, `image_enable_xformers`,
+  `image_enable_torch_compile`, and CPU offload settings.
+- Authentication: `auth_passwords` and `auth_session_secret`.
 
 ## Backlog
 

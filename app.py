@@ -28,7 +28,10 @@ LOG_FILE_NAME_DEFAULT = "speech2pictures.log"
 LOG_LEVEL_DEFAULT = "INFO"
 LOG_MAX_BYTES_DEFAULT = 5 * 1024 * 1024
 LOG_BACKUP_COUNT_DEFAULT = 3
-AUTO_TRANSCRIPT_TARGET_CHARS_DEFAULT = 200
+AUTO_TRANSCRIPT_MIN_WORDS_DEFAULT = 3
+AUTO_SILENCE_DISCARD_SECONDS_DEFAULT = 120
+AUTO_SILENCE_GENERATE_SECONDS_DEFAULT = 60
+AUTO_TRANSCRIPT_MAX_CHARS_DEFAULT = 700
 HISTORY_RECENT_LIMIT_DEFAULT = 50
 AUTH_PASSWORDS_DEFAULT = ("speech2pictures",)
 AUTH_SESSION_SECRET_DEFAULT = "speech2pictures-dev-session-secret"
@@ -251,10 +254,37 @@ def render_manual_page(
 def render_auto_page(message="Ready to record audio."):
     latest_image = None
     latest_id = images_db.get_last_picture_id()
-    transcript_target_chars = getattr(
-        config,
-        "auto_transcript_target_chars",
-        AUTO_TRANSCRIPT_TARGET_CHARS_DEFAULT,
+    transcript_min_words = _resolve_int_setting(
+        getattr(
+            config,
+            "auto_transcript_min_words",
+            AUTO_TRANSCRIPT_MIN_WORDS_DEFAULT,
+        ),
+        AUTO_TRANSCRIPT_MIN_WORDS_DEFAULT,
+    )
+    silence_discard_seconds = _resolve_int_setting(
+        getattr(
+            config,
+            "auto_silence_discard_seconds",
+            AUTO_SILENCE_DISCARD_SECONDS_DEFAULT,
+        ),
+        AUTO_SILENCE_DISCARD_SECONDS_DEFAULT,
+    )
+    silence_generate_seconds = _resolve_int_setting(
+        getattr(
+            config,
+            "auto_silence_generate_seconds",
+            AUTO_SILENCE_GENERATE_SECONDS_DEFAULT,
+        ),
+        AUTO_SILENCE_GENERATE_SECONDS_DEFAULT,
+    )
+    transcript_max_chars = _resolve_int_setting(
+        getattr(
+            config,
+            "auto_transcript_max_chars",
+            AUTO_TRANSCRIPT_MAX_CHARS_DEFAULT,
+        ),
+        AUTO_TRANSCRIPT_MAX_CHARS_DEFAULT,
     )
 
     if latest_id is not None:
@@ -274,7 +304,10 @@ def render_auto_page(message="Ready to record audio."):
         "auto.html",
         Message=message,
         LatestImage=latest_image,
-        AutoTranscriptTargetChars=transcript_target_chars,
+        AutoTranscriptMinWords=transcript_min_words,
+        AutoSilenceDiscardSeconds=silence_discard_seconds,
+        AutoSilenceGenerateSeconds=silence_generate_seconds,
+        AutoTranscriptMaxChars=transcript_max_chars,
     )
 
 
