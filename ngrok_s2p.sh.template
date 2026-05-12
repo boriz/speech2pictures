@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Local ngrok setup:
+# 1. Install ngrok and make sure `ngrok` is on PATH.
+# 2. Add your auth token:
+#      ngrok config add-authtoken <token>
+# 3. Reserve a static domain in the ngrok dashboard.
+# 4. Copy this file to ngrok_s2p.sh and set DOMAIN below.
+#    Use only the hostname, without https://.
+
+DOMAIN=your-domain.ngrok-free.app
+
+PIDS=`ps -eaf | awk '$8 ~ /(^|\/)ngrok$/ {print $2}'`
+if [[ "" !=  "$PIDS" ]]; then
+  echo "Killing ngrok, pids = $PIDS"
+  kill $PIDS
+fi
+
+PIDS=`ps -eaf | grep '[f]lask' | awk '{print $2}'`
+if [[ "" !=  "$PIDS" ]]; then
+  echo "Killing flask, pids = $PIDS"
+  kill $PIDS
+fi
+
+# Map port 5000 to the configured ngrok domain.
+ngrok http --domain=$DOMAIN 5000 &
+
+# Finally run the app.
+./run_app.sh
