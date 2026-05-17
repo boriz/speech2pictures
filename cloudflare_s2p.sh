@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Local Cloudflare Tunnel setup:
+# 1. Install cloudflared and make sure `cloudflared` is on PATH.
+# 2. Authenticate once (opens browser login):
+#      cloudflared tunnel login
+# 3. Create a named tunnel once:
+#      cloudflared tunnel create speech2pictures
+# 4. Route your DNS hostname to that tunnel once:
+#      cloudflared tunnel route dns speech2pictures txt2img.example.com
+# 5. Set TUNNEL_NAME and HOSTNAME below.
+
+TUNNEL_NAME=speech2pictures
+HOSTNAME=txt2img.theboris.net
+
+PIDS=`ps -eaf | awk '$8 ~ /(^|\/)cloudflared$/ {print $2}'`
+if [[ "" != "$PIDS" ]]; then
+  echo "Killing cloudflared, pids = $PIDS"
+  kill $PIDS
+fi
+
+PIDS=`ps -eaf | grep '[f]lask' | awk '{print $2}'`
+if [[ "" != "$PIDS" ]]; then
+  echo "Killing flask, pids = $PIDS"
+  kill $PIDS
+fi
+
+# Run the named tunnel against the local Flask app.
+echo "Starting Cloudflare Tunnel '$TUNNEL_NAME' for https://$HOSTNAME"
+cloudflared tunnel run --url http://localhost:5000 "$TUNNEL_NAME" &
+
+# Finally run the app.
+./run_app.sh

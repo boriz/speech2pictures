@@ -80,6 +80,18 @@ Use the template for local ngrok exposure:
 cp ngrok_s2p.sh.template ngrok_s2p.sh
 ```
 
+Install and configure ngrok first:
+
+1. Install ngrok and make sure `ngrok` is on your `PATH`.
+2. Add your auth token:
+
+```bash
+ngrok config add-authtoken <token>
+```
+
+3. Reserve a static domain in the ngrok dashboard.
+4. Edit `DOMAIN` in `ngrok_s2p.sh` to that hostname, without `https://`.
+
 Edit `DOMAIN` in `ngrok_s2p.sh`, then run:
 
 ```bash
@@ -88,6 +100,52 @@ Edit `DOMAIN` in `ngrok_s2p.sh`, then run:
 
 The script maps ngrok to port `5000` with `ngrok http --url=... 5000` and then
 starts the app through `./run_app.sh`.
+
+## Cloudflare Tunnel
+
+Use the template for local Cloudflare exposure:
+
+```bash
+cp cloudflare_s2p.sh.template cloudflare_s2p.sh
+```
+
+Install and configure Cloudflare Tunnel first:
+
+1. Install `cloudflared` and make sure `cloudflared` is on your `PATH`.
+2. Authenticate once:
+
+```bash
+cloudflared tunnel login
+```
+
+3. Create a named tunnel once:
+
+```bash
+cloudflared tunnel create speech2pictures
+```
+
+4. Route your hostname to that tunnel once:
+
+```bash
+cloudflared tunnel route dns speech2pictures your-app.example.com
+```
+
+5. Edit `TUNNEL_NAME` and `HOSTNAME` in `cloudflare_s2p.sh`.
+
+Then run:
+
+```bash
+./cloudflare_s2p.sh
+```
+
+The script runs the named tunnel against port `5000` with
+`cloudflared tunnel run --url http://localhost:5000 <tunnel-name>` and then
+starts the app through `./run_app.sh`.
+
+If you see a message about account-less or quick tunnels, you are using the
+ad-hoc tunnel mode instead of a named tunnel. A stable custom hostname should
+use `cloudflared tunnel create`, `cloudflared tunnel route dns`, and then
+`cloudflared tunnel run`.
 
 ## Test
 
